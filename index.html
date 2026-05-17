@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C.A.R.E. — Context-Aware Architectural Recommendation Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Shippori+Mincho:wght@400;500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root {
+    /* Zen palette: washi paper, sumi ink, faint stone, warm clay accent */
+    --paper:        #F5F1E8;   /* washi base */
+    --paper-soft:   #EFEAE0;   /* secondary paper */
+    --paper-deep:   #E8E2D4;   /* card surface contrast */
+    --ink:          #1C1815;   /* sumi black */
+    --ink-soft:     #3D3833;   /* secondary text */
+    --ink-faint:    #6F6760;   /* tertiary text */
+    --ink-trace:    #A8A095;   /* hairline / labels */
+
+    --stone:        #D9D2C3;   /* dividers */
+    --stone-faint:  #E5DFD2;   /* subtle bg */
+
+    --clay:         #A6533A;   /* primary accent — clay/terracotta */
+    --clay-soft:    #C68A6F;   /* secondary accent */
+    --clay-faint:   #EBD9CC;   /* accent wash */
+
+    --moss:         #6B7355;   /* secondary — moss green for OK states */
+    --moss-faint:   #DDE0D0;
+
+    --indigo:       #3A4A5C;   /* deep accent for highlights */
+    --indigo-faint: #CFD5DE;
+
+    --gold:         #B89968;   /* used very sparingly */
+
+    --shadow-sm: 0 1px 0 rgba(28,24,21,0.04);
+    --shadow-md: 0 1px 2px rgba(28,24,21,0.03), 0 8px 24px rgba(28,24,21,0.04);
+    --shadow-lg: 0 1px 2px rgba(28,24,21,0.04), 0 18px 48px rgba(28,24,21,0.06);
+
+    --display: 'Cormorant Garamond', 'Shippori Mincho', serif;
+    --serif:   'Shippori Mincho', 'Cormorant Garamond', serif;
+    --sans:    'Inter', -apple-system, sans-serif;
+    --mono:    'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Subtle washi paper texture overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(166,83,58,0.012) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(58,74,92,0.012) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.09 0 0 0 0 0.08 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.55;
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ============ APP LAYOUT ============ */
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* ============ SIDEBAR ============ */
+  .sidebar {
+    border-right: 1px solid var(--stone);
+    padding: 36px 0;
+    background: var(--paper);
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  .brand { padding: 0 32px 32px; border-bottom: 1px solid var(--stone-faint); margin-bottom: 24px; }
+  .brand-mark {
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .brand-seal {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--ink); border-radius: 50%;
+    font-family: var(--display); font-size: 16px; font-weight: 500;
+    color: var(--ink);
+    transition: all 0.6s ease;
+  }
+  .brand-seal:hover { background: var(--ink); color: var(--paper); transform: rotate(90deg); }
+  .brand-name { font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: 0.08em; }
+  .brand-sub { font-size: 9.5px; color: var(--ink-faint); letter-spacing: 0.28em; margin-top: 6px; text-transform: uppercase; }
+
+  .nav-section-label {
+    padding: 0 32px;
+    font-size: 9.5px;
+    letter-spacing: 0.25em;
+    color: var(--ink-trace);
+    text-transform: uppercase;
+    margin: 28px 0 10px;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 32px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s ease;
+    letter-spacing: 0.01em;
+  }
+  .nav-item:hover { color: var(--ink); }
+  .nav-item.active { color: var(--ink); font-weight: 500; }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 18px; background: var(--clay);
+  }
+  .nav-item .nav-num {
+    font-family: var(--display); font-style: italic; font-size: 13px;
+    color: var(--ink-trace); width: 14px; opacity: 0.8;
+  }
+  .nav-item.active .nav-num { color: var(--clay); }
+
+  .sidebar-foot {
+    margin-top: auto; padding: 24px 32px 0;
+    border-top: 1px solid var(--stone-faint);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--clay-soft), var(--clay));
+    color: var(--paper); display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 13px; font-weight: 500;
+  }
+  .user-info { font-size: 12px; line-height: 1.3; }
+  .user-info .u-name { color: var(--ink); }
+  .user-info .u-role { color: var(--ink-trace); font-size: 10.5px; letter-spacing: 0.04em; }
+
+  /* ============ MAIN ============ */
+  .main { padding: 0; min-width: 0; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 56px;
+    border-bottom: 1px solid var(--stone-faint);
+    background: rgba(245,241,232,0.85);
+    backdrop-filter: blur(20px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .breadcrumb { font-size: 12px; color: var(--ink-faint); letter-spacing: 0.04em; }
+  .breadcrumb .bc-sep { margin: 0 10px; color: var(--ink-trace); }
+  .breadcrumb .bc-current { color: var(--ink); }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid var(--stone);
+    border-radius: 999px;
+    background: var(--paper-soft);
+    font-size: 12px;
+    color: var(--ink-faint);
+    min-width: 220px;
+    transition: all 0.3s ease;
+  }
+  .search-box:focus-within { border-color: var(--ink-soft); background: var(--paper); }
+  .search-box input { border: none; outline: none; background: none; flex: 1; font-family: inherit; font-size: 12px; color: var(--ink); }
+  .search-box .key { font-family: var(--mono); font-size: 10px; color: var(--ink-trace); border: 1px solid var(--stone); padding: 1px 5px; border-radius: 3px; }
+
+  .page { padding: 56px 56px 80px; max-width: 1400px; }
+
+  .page-head { margin-bottom: 48px; }
+  .page-eyebrow {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--ink-trace);
+    margin-bottom: 18px;
+  }
+  .page-eyebrow::before {
+    content: ''; width: 24px; height: 1px; background: var(--ink-trace);
+  }
+  .page-title {
+    font-family: var(--display);
+    font-size: 56px;
+    font-weight: 400;
+    line-height: 1.05;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .page-title em { font-style: italic; color: var(--clay); }
+  .page-sub { font-size: 15px; color: var(--ink-faint); max-width: 620px; line-height: 1.7; font-weight: 300; }
+
+  /* ============ CARDS / GRIDS ============ */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--stone-faint);
+    border: 1px solid var(--stone-faint);
+    margin-bottom: 56px;
+  }
+  .stat {
+    padding: 32px 28px;
+    background: var(--paper);
+    position: relative;
+    transition: background 0.4s ease;
+  }
+  .stat:hover { background: var(--paper-soft); }
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-trace);
+    margin-bottom: 18px;
+  }
+  .stat-value {
+    font-family: var(--display);
+    font-size: 52px;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  .stat-value .stat-unit { font-size: 18px; color: var(--ink-faint); margin-left: 4px; font-style: italic; }
+  .stat-delta { font-size: 11px; color: var(--moss); display: flex; align-items: center; gap: 6px; }
+  .stat-delta.down { color: var(--clay); }
+  .stat-delta .ind { font-family: var(--display); font-style: italic; }
+
+  /* Section heading */
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--stone-faint);
+  }
+  .section-title {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .section-title em { font-style: italic; color: var(--clay); }
+  .section-sub { font-size: 12px; color: var(--ink-faint); letter-spacing: 0.02em; }
+
+  /* Two-column */
+  .split-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; margin-bottom: 56px; }
+
+  /* Themes list */
+  .theme-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--stone-faint); }
+  .theme-row {
+    display: grid;
+    grid-template-columns: 32px 1fr auto auto;
+    align-items: center; gap: 20px;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--stone-faint);
+    transition: background 0.3s ease;
+    cursor: pointer;
+  }
+  .theme-row:last-child { border-bottom: none; }
+  .theme-row:hover { background: var(--paper-soft); }
+  .theme-num { font-family: var(--display); font-style: italic; font-size: 16px; color: var(--ink-trace); }
+  .theme-label { font-size: 14px; color: var(--ink); font-weight: 400; }
+  .theme-zone { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+  .theme-count { font-family: var(--display); font-size: 18px; font-style: italic; color: var(--ink-faint); }
+  .theme-sev {
+    font-size: 9.5px;
+    padding: 3px 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+  }
+  .sev-high { color: var(--clay); }
+  .sev-med  { color: var(--gold); }
+  .sev-low  { color: var(--moss); }
+
+  /* Right side panel */
+  .side-panel {
+    border: 1px solid var(--stone-faint);
+    padding: 28px;
+    background: var(--paper);
+  }
+  .panel-title {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 18px;
+    color: var(--ink);
+  }
+  .upload-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--stone-faint);
+    font-size: 12px;
+  }
+  .upload-row:last-child { border-bottom: none; }
+  .upload-row .file-name { color: var(--ink); }
+  .upload-row .file-meta { color: var(--ink-trace); font-size: 11px; letter-spacing: 0.04em; }
+  .upload-row .file-status { font-size: 10px; letter-spacing: 0.18em; color: var(--moss); text-transform: uppercase; }
+
+  /* Project health gauge */
+  .health-ring {
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    padding: 12px 0 6px;
+  }
+  .ring { position: relative; width: 130px; height: 130px; }
+  .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ring-bg { fill: none; stroke: var(--stone-faint); stroke-width: 6; }
+  .ring-fill { fill: none; stroke: var(--clay); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
+  .ring-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .ring-label .ring-num { font-family: var(--display); font-size: 38px; line-height: 1; color: var(--ink); }
+  .ring-label .ring-unit { font-size: 10px; letter-spacing: 0.2em; color: var(--ink-trace); text-transform: uppercase; margin-top: 6px; }
+
+  .health-meta { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--ink-faint); padding-top: 18px; border-top: 1px solid var(--stone-faint); }
+  .health-meta .hm-val { color: var(--ink); font-family: var(--display); font-size: 16px; font-style: italic; }
+
+  /* ============ UPLOAD CENTER ============ */
+  .upload-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px; }
+  .dropzone {
+    border: 1px dashed var(--stone);
+    background: var(--paper);
+    padding: 48px 36px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .dropzone:hover {
+    border-color: var(--clay);
+    background: var(--paper-soft);
+    transform: translateY(-2px);
+  }
+  .dropzone-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 20px;
+    border: 1px solid var(--stone);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 22px; font-style: italic;
+    color: var(--ink-faint);
+    transition: all 0.4s ease;
+  }
+  .dropzone:hover .dropzone-icon {
+    border-color: var(--clay); color: var(--clay); transform: rotate(45deg);
+  }
+  .dropzone-type {
+    font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ink); margin-bottom: 6px;
+  }
+  .dropzone-desc { font-size: 12px; color: var(--ink-faint); margin-bottom: 16px; line-height: 1.7; }
+  .dropzone-formats { font-size: 9.5px; letter-spacing: 0.24em; color: var(--ink-trace); text-transform: uppercase; }
+
+  .upload-progress { margin-top: 24px; padding: 0 4px; }
+  .upload-progress-row {
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    gap: 16px; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--stone-faint);
+    font-size: 12px;
+  }
+  .progress-bar { width: 160px; height: 2px; background: var(--stone-faint); position: relative; overflow: hidden; }
+  .progress-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--clay); }
+
+  /* ============ POE INSIGHTS ============ */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+  .metric-card {
+    border: 1px solid var(--stone-faint);
+    padding: 26px 24px;
+    background: var(--paper);
+    transition: all 0.4s ease;
+  }
+  .metric-card:hover { background: var(--paper-soft); border-color: var(--stone); }
+  .metric-label { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-trace); margin-bottom: 16px; }
+  .metric-value { font-family: var(--display); font-size: 42px; font-weight: 400; color: var(--ink); margin-bottom: 12px; line-height: 1; }
+  .metric-bar { height: 2px; background: var(--stone-faint); position: relative; margin-bottom: 8px; }
+  .metric-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; transition: width 1s cubic-bezier(0.22, 1, 0.36, 1); }
+  .fill-clay { background: var(--clay); }
+  .fill-moss { background: var(--moss); }
+  .fill-gold { background: var(--gold); }
+  .fill-indigo { background: var(--indigo); }
+  .metric-foot { font-size: 11px; color: var(--ink-faint); display: flex; justify-content: space-between; }
+
+  /* Trend chart card */
+  .chart-card { border: 1px solid var(--stone-faint); background: var(--paper); padding: 32px 36px 28px; margin-bottom: 40px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  .chart-title { font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ink); }
+  .chart-legend { display: flex; gap: 22px; font-size: 11px; color: var(--ink-faint); }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .chart-legend .dot { width: 8px; height: 1.5px; background: currentColor; }
+
+  .chart-svg { width: 100%; height: 240px; }
+
+  /* ============ SPATIAL ZONE EXPLORER ============ */
+  .zone-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 36px; margin-bottom: 48px; }
+  .zone-map {
+    border: 1px solid var(--stone-faint);
+    background: var(--paper);
+    padding: 36px;
+    position: relative;
+  }
+  .zone-map-title { font-family: var(--display); font-size: 20px; color: var(--ink); margin-bottom: 6px; font-weight: 400; }
+  .zone-map-sub { font-size: 11px; color: var(--ink-trace); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 24px; }
+  .floorplan { width: 100%; height: 440px; }
+
+  .zone-rect {
+    fill: var(--paper-soft);
+    stroke: var(--stone);
+    stroke-width: 1;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .zone-rect:hover { fill: var(--clay-faint); stroke: var(--clay); }
+  .zone-rect.active { fill: var(--clay-faint); stroke: var(--clay); stroke-width: 1.5; }
+
+  .zone-label-text {
+    font-family: var(--display); font-size: 14px; font-style: italic;
+    fill: var(--ink-soft);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+  .zone-rect.active + .zone-label-text { fill: var(--clay); }
+
+  .zone-detail {
+    border: 1px solid var(--stone-faint);
+    background: var(--paper);
+    padding: 32px;
+    transition: all 0.5s ease;
+  }
+  .zone-detail-eyebrow { font-size: 10px; letter-spacing: 0.3em; color: var(--clay); text-transform: uppercase; margin-bottom: 10px; }
+  .zone-detail-title { font-family: var(--display); font-size: 36px; font-weight: 400; color: var(--ink); margin-bottom: 24px; line-height: 1.1; }
+
+  .zone-metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 18px 0; border-top: 1px solid var(--stone-faint); border-bottom: 1px solid var(--stone-faint); margin-bottom: 24px; }
+  .zm { display: flex; flex-direction: column; gap: 6px; }
+  .zm-label { font-size: 9.5px; letter-spacing: 0.22em; color: var(--ink-trace); text-transform: uppercase; }
+  .zm-val { font-family: var(--display); font-size: 22px; color: var(--ink); }
+
+  .zone-section-label {
+    font-size: 10px; letter-spacing: 0.28em; color: var(--ink-trace);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .zone-section-label::after { content: ''; flex: 1; height: 1px; background: var(--stone-faint); }
+
+  .complaint-item {
+    font-size: 13px; color: var(--ink-soft);
+    padding: 10px 0;
+    line-height: 1.7;
+    border-bottom: 1px dashed var(--stone-faint);
+    font-style: italic;
+    font-family: var(--serif);
+  }
+  .complaint-item:last-child { border-bottom: none; }
+  .complaint-item::before { content: '— '; color: var(--ink-trace); font-style: normal; }
+
+  .ai-insight-box {
+    background: linear-gradient(180deg, var(--paper-soft) 0%, var(--paper) 100%);
+    border-left: 2px solid var(--clay);
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+    font-family: var(--serif);
+  }
+  .ai-insight-label { font-family: var(--sans); font-size: 9.5px; letter-spacing: 0.24em; color: var(--clay); text-transform: uppercase; margin-bottom: 10px; }
+
+  /* ============ RECOMMENDATIONS ============ */
+  .rec-card {
+    border: 1px solid var(--stone-faint);
+    background: var(--paper);
+    padding: 36px 40px;
+    margin-bottom: 20px;
+    transition: all 0.4s ease;
+  }
+  .rec-card:hover { box-shadow: var(--shadow-md); }
+  .rec-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; padding-bottom: 22px; border-bottom: 1px solid var(--stone-faint); }
+  .rec-num { font-family: var(--display); font-style: italic; font-size: 32px; color: var(--ink-trace); margin-right: 18px; }
+  .rec-title { font-family: var(--display); font-size: 26px; font-weight: 400; color: var(--ink); line-height: 1.2; margin-bottom: 8px; }
+  .rec-zone-tag { font-size: 10px; letter-spacing: 0.22em; color: var(--ink-faint); text-transform: uppercase; }
+
+  .confidence-bar { text-align: right; min-width: 120px; }
+  .confidence-bar .cb-label { font-size: 9.5px; letter-spacing: 0.22em; color: var(--ink-trace); text-transform: uppercase; margin-bottom: 10px; }
+  .conf-dots { display: inline-flex; gap: 3px; }
+  .conf-dot { width: 16px; height: 3px; background: var(--stone-faint); }
+  .conf-dot.on { background: var(--clay); }
+  .conf-val { font-family: var(--display); font-size: 28px; color: var(--ink); margin-top: 6px; line-height: 1; }
+  .conf-val .conf-total { color: var(--ink-trace); font-size: 16px; }
+
+  .rec-body { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-bottom: 24px; }
+  .rec-section-label { font-size: 10px; letter-spacing: 0.26em; color: var(--ink-trace); text-transform: uppercase; margin-bottom: 14px; }
+  .rec-params { display: flex; flex-direction: column; gap: 10px; }
+  .rec-param { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px dashed var(--stone-faint); font-size: 13px; }
+  .rec-param-name { color: var(--ink-faint); }
+  .rec-param-val { color: var(--ink); font-family: var(--mono); font-size: 12px; }
+
+  .rec-rationale { font-size: 13px; color: var(--ink-soft); line-height: 1.8; font-family: var(--serif); font-style: italic; }
+
+  .rec-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 22px; border-top: 1px solid var(--stone-faint); }
+  .rec-citations { display: flex; gap: 8px; flex-wrap: wrap; }
+  .citation {
+    font-size: 10px; letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border: 1px solid var(--stone);
+    color: var(--ink-faint);
+    background: var(--paper);
+    border-radius: 999px;
+  }
+
+  /* ============ AI ADVISOR (chat) ============ */
+  .advisor-layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: 32px; }
+  .chat-container {
+    border: 1px solid var(--stone-faint);
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    height: 640px;
+  }
+  .chat-header { padding: 24px 32px; border-bottom: 1px solid var(--stone-faint); display: flex; align-items: center; gap: 14px; }
+  .chat-header .chat-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--paper-soft); border: 1px solid var(--stone);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 18px; font-style: italic;
+    color: var(--clay);
+  }
+  .chat-header .ch-title { font-family: var(--display); font-size: 18px; font-weight: 400; color: var(--ink); }
+  .chat-header .ch-status { font-size: 11px; color: var(--moss); display: flex; align-items: center; gap: 6px; }
+  .chat-header .ch-status::before { content: ''; width: 6px; height: 6px; background: var(--moss); border-radius: 50%; }
+
+  .chat-body { flex: 1; padding: 28px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; }
+
+  .msg { display: flex; gap: 14px; max-width: 88%; }
+  .msg.user { margin-left: auto; flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--paper-soft); border: 1px solid var(--stone);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--display); font-size: 12px; font-style: italic;
+    color: var(--ink-faint);
+  }
+  .msg.user .msg-avatar { background: var(--ink); color: var(--paper); border-color: var(--ink); font-style: normal; font-family: var(--sans); font-size: 11px; font-weight: 500; }
+
+  .msg-body {
+    padding: 14px 18px;
+    background: var(--paper-soft);
+    font-size: 13px; line-height: 1.7;
+    color: var(--ink);
+    border: 1px solid var(--stone-faint);
+  }
+  .msg.user .msg-body { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  .msg-evidence {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px dashed var(--stone);
+    font-size: 11px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .msg-evidence-label { font-size: 9.5px; letter-spacing: 0.24em; color: var(--clay); text-transform: uppercase; margin-bottom: 4px; }
+  .msg-ev-item { color: var(--ink-faint); font-family: var(--mono); font-size: 10.5px; }
+
+  .msg-dim-list { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .msg-dim { font-family: var(--mono); font-size: 11.5px; color: var(--ink); display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed var(--stone-faint); }
+  .msg-dim .dim-k { color: var(--ink-faint); }
+
+  .chat-input-wrap { border-top: 1px solid var(--stone-faint); padding: 22px 28px; background: var(--paper); }
+  .chat-input {
+    display: flex; align-items: center; gap: 14px;
+    border: 1px solid var(--stone);
+    background: var(--paper-soft);
+    padding: 14px 18px;
+    transition: all 0.3s ease;
+  }
+  .chat-input:focus-within { border-color: var(--ink); background: var(--paper); }
+  .chat-input input { flex: 1; border: none; background: none; outline: none; font-family: inherit; font-size: 13.5px; color: var(--ink); }
+  .chat-input button {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+  }
+  .chat-input button:hover { background: var(--clay); transform: rotate(-45deg); }
+
+  .suggestion-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip {
+    padding: 6px 14px;
+    border: 1px solid var(--stone);
+    background: var(--paper);
+    font-size: 11px;
+    color: var(--ink-soft);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .chip:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+  .advisor-side {
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .side-card {
+    border: 1px solid var(--stone-faint);
+    background: var(--paper);
+    padding: 24px 26px;
+  }
+  .side-card-title { font-family: var(--display); font-size: 18px; color: var(--ink); margin-bottom: 14px; }
+  .precedent-item { padding: 12px 0; border-bottom: 1px dashed var(--stone-faint); }
+  .precedent-item:last-child { border-bottom: none; }
+  .precedent-name { font-size: 13px; color: var(--ink); }
+  .precedent-meta { font-size: 10.5px; color: var(--ink-trace); letter-spacing: 0.06em; margin-top: 3px; }
+
+  /* ============ TRANSITIONS / PAGE SWITCH ============ */
+  .view { display: none; }
+  .view.active { display: block; animation: viewIn 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Decorative seal stamp */
+  .seal-decorator {
+    position: absolute; right: 56px; top: 32px;
+    font-family: var(--display); font-style: italic;
+    font-size: 11px; color: var(--ink-trace);
+    letter-spacing: 0.12em;
+    pointer-events: none;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--stone); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-trace); }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .split-grid { grid-template-columns: 1fr; }
+    .zone-layout { grid-template-columns: 1fr; }
+    .advisor-layout { grid-template-columns: 1fr; }
+    .upload-grid { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    .rec-body { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; }
+    .page { padding: 32px 24px 60px; }
+    .topbar { padding: 16px 24px; }
+    .page-title { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <span class="brand-seal">心</span>
+        <div>
+          <div class="brand-name">C.A.R.E.</div>
+          <div class="brand-sub">Architectural Intelligence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-section-label">Workspace</div>
+    <div class="nav-item active" data-view="dashboard">
+      <span class="nav-num">i.</span> Executive Overview
+    </div>
+    <div class="nav-item" data-view="upload">
+      <span class="nav-num">ii.</span> Upload Center
+    </div>
+    <div class="nav-item" data-view="poe">
+      <span class="nav-num">iii.</span> POE Insights
+    </div>
+    <div class="nav-item" data-view="zones">
+      <span class="nav-num">iv.</span> Spatial Zones
+    </div>
+    <div class="nav-item" data-view="recommendations">
+      <span class="nav-num">v.</span> Recommendations
+    </div>
+    <div class="nav-item" data-view="advisor">
+      <span class="nav-num">vi.</span> Design Advisor
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="avatar">YL</div>
+      <div class="user-info">
+        <div class="u-name">Yixuan Liu</div>
+        <div class="u-role">Job Captain · MH Architects</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <div class="topbar">
+      <div class="breadcrumb">
+        <span>Memorial Cancer Center</span>
+        <span class="bc-sep">/</span>
+        <span>North Wing Renovation</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-current" id="crumb">Executive Overview</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <span>⌕</span>
+          <input placeholder="Search themes, zones, citations…">
+          <span class="key">⌘ K</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VIEW: DASHBOARD ============ -->
+    <section class="view active page" data-view="dashboard">
+      <div class="seal-decorator">— in the spirit of quiet attention</div>
+
+      <header class="page-head">
+        <div class="page-eyebrow">Executive Overview · Spring 2026</div>
+        <h1 class="page-title">A practice of <em>listening</em><br>to spaces that heal.</h1>
+        <p class="page-sub">Eighty-nine voices have been gathered from the partner facility. Beneath their words, eleven recurring themes have emerged — patterns the architecture has been asked to answer.</p>
+      </header>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-value">4</div>
+          <div class="stat-delta">2 entering schematic design</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">High-Risk Themes</div>
+          <div class="stat-value">3<span class="stat-unit">of 11</span></div>
+          <div class="stat-delta down"><span class="ind">↗</span> 1 new since last cycle</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Records Analyzed</div>
+          <div class="stat-value">89</div>
+          <div class="stat-delta">74 patient · 15 staff</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Cycle Compression</div>
+          <div class="stat-value">68<span class="stat-unit">%</span></div>
+          <div class="stat-delta">37mo → 12mo target</div>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <div>
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">High-priority <em>themes</em></h2>
+            </div>
+            <div class="section-sub">Stable across 5 prompt iterations</div>
+          </div>
+
+          <div class="theme-list">
+            <div class="theme-row">
+              <div class="theme-num">i.</div>
+              <div>
+                <div class="theme-label">Acoustic exposure during treatment</div>
+                <div class="theme-zone">Infusion Bay</div>
+              </div>
+              <div class="theme-count">42</div>
+              <div class="theme-sev sev-high">High</div>
+            </div>
+            <div class="theme-row">
+              <div class="theme-num">ii.</div>
+              <div>
+                <div class="theme-label">Insufficient visual privacy</div>
+                <div class="theme-zone">Infusion Bay</div>
+              </div>
+              <div class="theme-count">36</div>
+              <div class="theme-sev sev-high">High</div>
+            </div>
+            <div class="theme-row">
+              <div class="theme-num">iii.</div>
+              <div>
+                <div class="theme-label">Wayfinding confusion on arrival</div>
+                <div class="theme-zone">Check-in · Waiting</div>
+              </div>
+              <div class="theme-count">28</div>
+              <div class="theme-sev sev-med">Medium</div>
+            </div>
+            <div class="theme-row">
+              <div class="theme-num">iv.</div>
+              <div>
+                <div class="theme-label">Inadequate family seating</div>
+                <div class="theme-zone">Infusion Bay · Family Support</div>
+              </div>
+              <div class="theme-count">22</div>
+              <div class="theme-sev sev-med">Medium</div>
+            </div>
+            <div class="theme-row">
+              <div class="theme-num">v.</div>
+              <div>
+                <div class="theme-label">Staff acoustic fatigue</div>
+                <div class="theme-zone">Nurse Station</div>
+              </div>
+              <div class="theme-count">11</div>
+              <div class="theme-sev sev-high">High</div>
+            </div>
+            <div class="theme-row">
+              <div class="theme-num">vi.</div>
+              <div>
+                <div class="theme-label">Aging facility appearance</div>
+                <div class="theme-zone">All zones</div>
+              </div>
+              <div class="theme-count">9</div>
+              <div class="theme-sev sev-low">Low</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-head">
+            <div><h2 class="section-title">Project <em>health</em></h2></div>
+          </div>
+          <div class="side-panel">
+            <div class="health-ring">
+              <div class="ring">
+                <svg viewBox="0 0 130 130">
+                  <circle class="ring-bg" cx="65" cy="65" r="56"></circle>
+                  <circle class="ring-fill" cx="65" cy="65" r="56"
+                    stroke-dasharray="351.86"
+                    stroke-dashoffset="84.4"></circle>
+                </svg>
+                <div class="ring-label">
+                  <div class="ring-num">76</div>
+                  <div class="ring-unit">Composite</div>
+                </div>
+              </div>
+              <div class="health-meta" style="flex-direction: column; gap: 14px;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                  <span>Theme stability</span><span class="hm-val">7 / 11</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                  <span>Schema coverage</span><span class="hm-val">38 fields</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                  <span>KB chunks indexed</span><span class="hm-val">88</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-head" style="margin-top: 36px;">
+            <div><h2 class="section-title">Recent <em>uploads</em></h2></div>
+          </div>
+          <div class="side-panel">
+            <div class="upload-row">
+              <div>
+                <div class="file-name">patient_survey_2025Q4.csv</div>
+                <div class="file-meta">2.3 MB · 247 rows · added Apr 28</div>
+              </div>
+              <div class="file-status">Indexed</div>
+            </div>
+            <div class="upload-row">
+              <div>
+                <div class="file-name">staff_interviews.pdf</div>
+                <div class="file-meta">412 KB · 15 transcripts · added Apr 26</div>
+              </div>
+              <div class="file-status">Indexed</div>
+            </div>
+            <div class="upload-row">
+              <div>
+                <div class="file-name">FGI_outpatient_§3.7.pdf</div>
+                <div class="file-meta">1.1 MB · 25 chunks · added Apr 22</div>
+              </div>
+              <div class="file-status">Indexed</div>
+            </div>
+            <div class="upload-row">
+              <div>
+                <div class="file-name">jalalianhosseini_2025.pdf</div>
+                <div class="file-meta">3.4 MB · 18 chunks · added Apr 21</div>
+              </div>
+              <div class="file-status">Indexed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: UPLOAD ============ -->
+    <section class="view page" data-view="upload">
+      <header class="page-head">
+        <div class="page-eyebrow">Upload Center · Stage 1 Ingestion</div>
+        <h1 class="page-title">Bring your <em>data</em><br>into the system.</h1>
+        <p class="page-sub">Drop files into the appropriate slot. Each ingested record is normalized to the v0.3 schema and tagged by spatial zone before entering the analysis pipeline.</p>
+      </header>
+
+      <div class="upload-grid">
+        <div class="dropzone">
+          <div class="dropzone-icon">+</div>
+          <div class="dropzone-type">PDF Documents</div>
+          <div class="dropzone-desc">POE reports, staff interview transcripts,<br>design guideline excerpts</div>
+          <div class="dropzone-formats">.pdf · max 50 MB</div>
+        </div>
+        <div class="dropzone">
+          <div class="dropzone-icon">+</div>
+          <div class="dropzone-type">Survey Data</div>
+          <div class="dropzone-desc">HCAHPS, open-ended responses,<br>structured patient feedback</div>
+          <div class="dropzone-formats">.csv · .xlsx · .json</div>
+        </div>
+        <div class="dropzone">
+          <div class="dropzone-icon">+</div>
+          <div class="dropzone-type">Sensor Logs</div>
+          <div class="dropzone-desc">Decibel readings, occupancy,<br>illuminance, temperature</div>
+          <div class="dropzone-formats">.csv · .json · time-indexed</div>
+        </div>
+        <div class="dropzone">
+          <div class="dropzone-icon">+</div>
+          <div class="dropzone-type">Architectural Drawings</div>
+          <div class="dropzone-desc">Floor plans, zone diagrams,<br>existing design documentation</div>
+          <div class="dropzone-formats">.dwg · .pdf · .svg</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <div><h2 class="section-title">Ingestion <em>queue</em></h2></div>
+        <div class="section-sub">Recent uploads · auto-validated against schema v0.3</div>
+      </div>
+
+      <div class="side-panel" style="padding: 12px 28px;">
+        <div class="upload-progress-row">
+          <div>
+            <div style="color:var(--ink); font-size:13px;">memorial_poe_2026Q1.csv</div>
+            <div style="color:var(--ink-trace); font-size:11px; margin-top:3px;">CSV · 89 records · spatial zones detected</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);">100%</div>
+          <div style="font-size:10px; letter-spacing:0.18em; color:var(--moss); text-transform:uppercase;">Ingested</div>
+        </div>
+        <div class="upload-progress-row">
+          <div>
+            <div style="color:var(--ink); font-size:13px;">north_wing_floorplan_v2.pdf</div>
+            <div style="color:var(--ink-trace); font-size:11px; margin-top:3px;">PDF · zone geometry extracted</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);">100%</div>
+          <div style="font-size:10px; letter-spacing:0.18em; color:var(--moss); text-transform:uppercase;">Ingested</div>
+        </div>
+        <div class="upload-progress-row">
+          <div>
+            <div style="color:var(--ink); font-size:13px;">herd_journal_q1_2026.pdf</div>
+            <div style="color:var(--ink-trace); font-size:11px; margin-top:3px;">PDF · 18 chunks · staff-experience corpus</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 64%;"></div></div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);">64%</div>
+          <div style="font-size:10px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase;">Chunking</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: POE INSIGHTS ============ -->
+    <section class="view page" data-view="poe">
+      <header class="page-head">
+        <div class="page-eyebrow">POE Insights · Quantified Experience</div>
+        <h1 class="page-title">Where the building<br><em>helps</em>, where it <em>strains</em>.</h1>
+        <p class="page-sub">Four indices summarize the post-occupancy signal. Values are derived from the partner dataset, weighted by mention frequency and sentiment polarity.</p>
+      </header>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Noise · ambient</div>
+          <div class="metric-value">62<span style="font-size:18px; color:var(--ink-faint); font-style:italic; margin-left:4px;">/100</span></div>
+          <div class="metric-bar"><div class="metric-bar-fill fill-clay" style="width: 62%;"></div></div>
+          <div class="metric-foot"><span>Target: ≥75</span><span>−13 from goal</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Privacy index</div>
+          <div class="metric-value">48<span style="font-size:18px; color:var(--ink-faint); font-style:italic; margin-left:4px;">/100</span></div>
+          <div class="metric-bar"><div class="metric-bar-fill fill-clay" style="width: 48%;"></div></div>
+          <div class="metric-foot"><span>Target: ≥70</span><span>critical gap</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Staff well-being</div>
+          <div class="metric-value">71<span style="font-size:18px; color:var(--ink-faint); font-style:italic; margin-left:4px;">/100</span></div>
+          <div class="metric-bar"><div class="metric-bar-fill fill-gold" style="width: 71%;"></div></div>
+          <div class="metric-foot"><span>Target: ≥80</span><span>−9 from goal</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Waiting room flow</div>
+          <div class="metric-value">79<span style="font-size:18px; color:var(--ink-faint); font-style:italic; margin-left:4px;">/100</span></div>
+          <div class="metric-bar"><div class="metric-bar-fill fill-moss" style="width: 79%;"></div></div>
+          <div class="metric-foot"><span>Target: ≥75</span><span>meeting goal</span></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="chart-title">Index trends · <em style="font-style:italic; color:var(--clay);">six-month window</em></div>
+          <div class="chart-legend">
+            <span style="color:var(--clay)"><span class="dot"></span> Noise</span>
+            <span style="color:var(--indigo)"><span class="dot"></span> Privacy</span>
+            <span style="color:var(--moss)"><span class="dot"></span> Staff</span>
+            <span style="color:var(--gold)"><span class="dot"></span> Flow</span>
+          </div>
+        </div>
+        <svg class="chart-svg" viewBox="0 0 800 240" preserveAspectRatio="none">
+          <!-- gridlines -->
+          <g stroke="#E8E2D4" stroke-width="0.5">
+            <line x1="0" y1="40"  x2="800" y2="40"/>
+            <line x1="0" y1="100" x2="800" y2="100"/>
+            <line x1="0" y1="160" x2="800" y2="160"/>
+            <line x1="0" y1="220" x2="800" y2="220"/>
+          </g>
+          <!-- y axis labels -->
+          <g font-family="JetBrains Mono" font-size="9" fill="#A8A095">
+            <text x="0" y="36">100</text>
+            <text x="0" y="96">75</text>
+            <text x="0" y="156">50</text>
+            <text x="0" y="216">25</text>
+          </g>
+          <!-- noise line (clay) -->
+          <polyline fill="none" stroke="#A6533A" stroke-width="1.5"
+            points="60,140 180,135 300,150 420,142 540,148 660,152 780,151"/>
+          <!-- privacy line (indigo) -->
+          <polyline fill="none" stroke="#3A4A5C" stroke-width="1.5"
+            points="60,170 180,168 300,165 420,166 540,164 660,166 780,165"/>
+          <!-- staff line (moss) -->
+          <polyline fill="none" stroke="#6B7355" stroke-width="1.5"
+            points="60,82 180,85 300,80 420,78 540,75 660,72 780,68"/>
+          <!-- flow line (gold) -->
+          <polyline fill="none" stroke="#B89968" stroke-width="1.5"
+            points="60,68 180,64 300,60 420,58 540,55 660,52 780,50"/>
+          <!-- dots at end -->
+          <circle cx="780" cy="151" r="3.5" fill="#A6533A"/>
+          <circle cx="780" cy="165" r="3.5" fill="#3A4A5C"/>
+          <circle cx="780" cy="68"  r="3.5" fill="#6B7355"/>
+          <circle cx="780" cy="50"  r="3.5" fill="#B89968"/>
+          <!-- x axis labels -->
+          <g font-family="JetBrains Mono" font-size="9" fill="#A8A095">
+            <text x="55"  y="240">NOV</text>
+            <text x="175" y="240">DEC</text>
+            <text x="295" y="240">JAN</text>
+            <text x="415" y="240">FEB</text>
+            <text x="535" y="240">MAR</text>
+            <text x="655" y="240">APR</text>
+            <text x="765" y="240">MAY</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: SPATIAL ZONES ============ -->
+    <section class="view page" data-view="zones">
+      <header class="page-head">
+        <div class="page-eyebrow">Spatial Zone Explorer · Floor 02</div>
+        <h1 class="page-title">Each room <em>speaks</em><br>in its own voice.</h1>
+        <p class="page-sub">Select a zone in the plan below to surface its complaints, metrics, and the AI's reading of what the patients and staff are asking the architecture to do.</p>
+      </header>
+
+      <div class="zone-layout">
+        <div class="zone-map">
+          <div class="zone-map-title">Memorial Cancer Center · North Wing</div>
+          <div class="zone-map-sub">Schematic floorplan · 4,200 sq ft</div>
+          <svg class="floorplan" viewBox="0 0 600 440" preserveAspectRatio="xMidYMid meet">
+            <!-- Outer building outline -->
+            <rect x="20" y="20" width="560" height="400" fill="none" stroke="#3D3833" stroke-width="1.5"/>
+
+            <!-- Waiting -->
+            <rect class="zone-rect" data-zone="waiting" x="40" y="40" width="200" height="120" rx="2"/>
+            <text class="zone-label-text" x="140" y="105">Waiting Area</text>
+
+            <!-- Check-in -->
+            <rect class="zone-rect" data-zone="checkin" x="40" y="180" width="200" height="80" rx="2"/>
+            <text class="zone-label-text" x="140" y="225">Check-in</text>
+
+            <!-- Family Support -->
+            <rect class="zone-rect" data-zone="family" x="40" y="280" width="200" height="120" rx="2"/>
+            <text class="zone-label-text" x="140" y="345">Family Support</text>
+
+            <!-- Infusion Bay (large) -->
+            <rect class="zone-rect active" data-zone="infusion" x="260" y="40" width="220" height="280" rx="2"/>
+            <text class="zone-label-text" x="370" y="180">Infusion Bay</text>
+
+            <!-- Nurse Station -->
+            <rect class="zone-rect" data-zone="nurse" x="260" y="340" width="220" height="60" rx="2"/>
+            <text class="zone-label-text" x="370" y="375">Nurse Station</text>
+
+            <!-- Corridor accent -->
+            <line x1="250" y1="40" x2="250" y2="400" stroke="#D9D2C3" stroke-width="1" stroke-dasharray="3 4"/>
+
+            <!-- Bay subdivisions inside Infusion -->
+            <g stroke="#D9D2C3" stroke-width="0.5" stroke-dasharray="2 3" pointer-events="none">
+              <line x1="260" y1="100" x2="480" y2="100"/>
+              <line x1="260" y1="160" x2="480" y2="160"/>
+              <line x1="260" y1="220" x2="480" y2="220"/>
+              <line x1="260" y1="280" x2="480" y2="280"/>
+              <line x1="370" y1="40" x2="370" y2="320"/>
+            </g>
+
+            <!-- N indicator -->
+            <g transform="translate(530, 380)">
+              <circle r="14" fill="none" stroke="#A8A095" stroke-width="0.8"/>
+              <text font-family="Cormorant Garamond" font-style="italic" font-size="14" text-anchor="middle" dominant-baseline="central" fill="#3D3833">N</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="zone-detail" id="zoneDetail">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: RECOMMENDATIONS ============ -->
+    <section class="view page" data-view="recommendations">
+      <header class="page-head">
+        <div class="page-eyebrow">Evidence-Based Recommendations · v0.3</div>
+        <h1 class="page-title">From feedback to<br><em>specifications</em>.</h1>
+        <p class="page-sub">Each card translates one validated theme into specifiable design parameters, grounded in retrieved literature with cited sources and a confidence score.</p>
+      </header>
+
+      <!-- Rec 1 -->
+      <div class="rec-card">
+        <div class="rec-head">
+          <div style="display: flex; align-items: flex-start;">
+            <div class="rec-num">i.</div>
+            <div>
+              <div class="rec-title">Acoustic separation between infusion bays</div>
+              <div class="rec-zone-tag">Zone · Infusion Bay</div>
+            </div>
+          </div>
+          <div class="confidence-bar">
+            <div class="cb-label">Confidence</div>
+            <div class="conf-dots">
+              <span class="conf-dot on"></span><span class="conf-dot on"></span>
+              <span class="conf-dot on"></span><span class="conf-dot on"></span>
+              <span class="conf-dot"></span>
+            </div>
+            <div class="conf-val">4<span class="conf-total">/5</span></div>
+          </div>
+        </div>
+
+        <div class="rec-body">
+          <div>
+            <div class="rec-section-label">Recommended parameters</div>
+            <div class="rec-params">
+              <div class="rec-param"><span class="rec-param-name">Bay-to-bay spacing</span><span class="rec-param-val">≥ 8 ft c-c</span></div>
+              <div class="rec-param"><span class="rec-param-name">Partition height</span><span class="rec-param-val">66 – 72 in</span></div>
+              <div class="rec-param"><span class="rec-param-name">Ceiling NRC</span><span class="rec-param-val">≥ 0.85</span></div>
+              <div class="rec-param"><span class="rec-param-name">Ambient noise (day)</span><span class="rec-param-val">≤ 45 dBA</span></div>
+              <div class="rec-param"><span class="rec-param-name">STC partition rating</span><span class="rec-param-val">35 – 40</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="rec-section-label">Design rationale</div>
+            <div class="rec-rationale">
+              "I could hear the alarms from other bays — it made it impossible to nap." Forty-two such comments locate the acoustic field as the dominant source of distress in the bay. The parameters above are the minimum thresholds at which patient-reported alarm intrusion drops below a measurable threshold in the cited studies.
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-foot">
+          <div class="rec-citations">
+            <span class="citation">FGI 2022 §3.7-2.2.4</span>
+            <span class="citation">Jalalianhosseini et al. (2025)</span>
+            <span class="citation">HERD 18(1), 76–94</span>
+          </div>
+          <div style="font-size:11px; color:var(--ink-trace); letter-spacing:0.06em;">Derived from 42 source records</div>
+        </div>
+      </div>
+
+      <!-- Rec 2 -->
+      <div class="rec-card">
+        <div class="rec-head">
+          <div style="display: flex; align-items: flex-start;">
+            <div class="rec-num">ii.</div>
+            <div>
+              <div class="rec-title">Visual privacy at the infusion station</div>
+              <div class="rec-zone-tag">Zone · Infusion Bay</div>
+            </div>
+          </div>
+          <div class="confidence-bar">
+            <div class="cb-label">Confidence</div>
+            <div class="conf-dots">
+              <span class="conf-dot on"></span><span class="conf-dot on"></span>
+              <span class="conf-dot on"></span><span class="conf-dot on"></span>
+              <span class="conf-dot"></span>
+            </div>
+            <div class="conf-val">4<span class="conf-total">/5</span></div>
+          </div>
+        </div>
+
+        <div class="rec-body">
+          <div>
+            <div class="rec-section-label">Recommended parameters</div>
+            <div class="rec-params">
+              <div class="rec-param"><span class="rec-param-name">Curtain extension</span><span class="rec-param-val">floor-to-ceiling</span></div>
+              <div class="rec-param"><span class="rec-param-name">Gap closure</span><span class="rec-param-val">≤ 2 in</span></div>
+              <div class="rec-param"><span class="rec-param-name">Privacy material</span><span class="rec-param-val">Opaque, antimicrobial</span></div>
+              <div class="rec-param"><span class="rec-param-name">Patient sightlines</span><span class="rec-param-val">Outward · windowed</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="rec-section-label">Design rationale</div>
+            <div class="rec-rationale">
+              Thirty-six records describe loss of privacy at the most vulnerable moments — receiving difficult news, weeping, vomiting. The current curtain detail fails not because it is the wrong material, but because its dimensional shortfall (6-inch gap at the floor) violates the patient's basic spatial dignity.
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-foot">
+          <div class="rec-citations">
+            <span class="citation">Planetree Standards (2021)</span>
+            <span class="citation">FGI 2022 §2.5</span>
+            <span class="citation">Cai &amp; Zimring (2018)</span>
+          </div>
+          <div style="font-size:11px; color:var(--ink-trace); letter-spacing:0.06em;">Derived from 36 source records</div>
+        </div>
+      </div>
+
+      <!-- Rec 3 -->
+      <div class="rec-card">
+        <div class="rec-head">
+          <div style="display: flex; align-items: flex-start;">
+            <div class="rec-num">iii.</div>
+            <div>
+              <div class="rec-title">Reception desk visibility &amp; arrival sequencing</div>
+              <div class="rec-zone-tag">Zone · Check-in · Waiting</div>
+            </div>
+          </div>
+          <div class="confidence-bar">
+            <div class="cb-label">Confidence</div>
+            <div class="conf-dots">
+              <span class="conf-dot on"></span><span class="conf-dot on"></span>
+              <span class="conf-dot on"></span><span class="conf-dot"></span>
+              <span class="conf-dot"></span>
+            </div>
+            <div class="conf-val">3<span class="conf-total">/5</span></div>
+          </div>
+        </div>
+
+        <div class="rec-body">
+          <div>
+            <div class="rec-section-label">Recommended parameters</div>
+            <div class="rec-params">
+              <div class="rec-param"><span class="rec-param-name">Desk-to-entry sightline</span><span class="rec-param-val">≤ 15 ft</span></div>
+              <div class="rec-param"><span class="rec-param-name">Signage luminance contrast</span><span class="rec-param-val">≥ 70%</span></div>
+              <div class="rec-param"><span class="rec-param-name">Waiting illuminance</span><span class="rec-param-val">300–500 lux · 3000K</span></div>
+              <div class="rec-param"><span class="rec-param-name">Zone color coding</span><span class="rec-param-val">Distinct floor accent</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="rec-section-label">Design rationale</div>
+            <div class="rec-rationale">
+              Twenty-eight first-visit patients describe being lost during arrival. The current desk faces sideways from the entry, breaking the primary sightline. Restoring a direct view from threshold to reception is the lowest-cost intervention with the highest reported relief.
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-foot">
+          <div class="rec-citations">
+            <span class="citation">Planetree §4.2</span>
+            <span class="citation">FGI 2022 §2.1</span>
+          </div>
+          <div style="font-size:11px; color:var(--ink-trace); letter-spacing:0.06em;">Derived from 28 source records</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEW: AI ADVISOR ============ -->
+    <section class="view page" data-view="advisor">
+      <header class="page-head">
+        <div class="page-eyebrow">Design Advisor · Ask &amp; Verify</div>
+        <h1 class="page-title">A second pair of <em>eyes</em><br>on every decision.</h1>
+        <p class="page-sub">Ask in plain language. The advisor responds with cited dimensional guidance, drawn only from the indexed knowledge base and the partner POE record.</p>
+      </header>
+
+      <div class="advisor-layout">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div class="chat-avatar">心</div>
+            <div style="flex: 1;">
+              <div class="ch-title">C.A.R.E. Advisor</div>
+              <div class="ch-status">Indexed against 88 chunks · 89 records</div>
+            </div>
+          </div>
+
+          <div class="chat-body" id="chatBody">
+            <!-- User msg -->
+            <div class="msg user">
+              <div class="msg-avatar">YL</div>
+              <div class="msg-body">How can I improve infusion bay privacy without losing nurse line-of-sight?</div>
+            </div>
+
+            <!-- AI msg -->
+            <div class="msg">
+              <div class="msg-avatar" style="font-family: var(--display);">心</div>
+              <div class="msg-body">
+                The constraint you describe is real — partition height that ensures patient privacy at the head and lap (the most vulnerable sightlines) does not need to extend to ceiling. A 66–72&nbsp;in tall partition with a translucent 12&nbsp;in upper light band preserves both: patient privacy at eye level, and nurse station scan-ability.
+                <div class="msg-dim-list">
+                  <div class="msg-dim"><span class="dim-k">Partition height (opaque)</span><span>66 – 72 in</span></div>
+                  <div class="msg-dim"><span class="dim-k">Translucent band height</span><span>12 in (84 in total)</span></div>
+                  <div class="msg-dim"><span class="dim-k">Bay-to-bay c-c spacing</span><span>≥ 8 ft</span></div>
+                  <div class="msg-dim"><span class="dim-k">Nurse station throw distance</span><span>≤ 32 ft to bay center</span></div>
+                </div>
+                <div class="msg-evidence">
+                  <div class="msg-evidence-label">Evidence chain</div>
+                  <span class="msg-ev-item">[1] FGI 2022 §3.7-2.2.4 — infusion station separation</span>
+                  <span class="msg-ev-item">[2] Cai &amp; Zimring (2018) — nurse station typology &amp; awareness</span>
+                  <span class="msg-ev-item">[3] Planetree (2021) — patient-centered privacy thresholds</span>
+                  <span class="msg-ev-item">[4] Memorial CC partner data — 36 privacy-related records</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-wrap">
+            <div class="chat-input">
+              <input id="chatInput" placeholder="Ask about a zone, theme, or specific parameter…">
+              <button id="chatSend">→</button>
+            </div>
+            <div class="suggestion-chips">
+              <div class="chip" data-q="What acoustic strategies work for an open infusion bay?">Acoustic strategies</div>
+              <div class="chip" data-q="How should I size the family seating area?">Family seating</div>
+              <div class="chip" data-q="What precedent projects address staff acoustic fatigue?">Staff fatigue precedents</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="advisor-side">
+          <div class="side-card">
+            <div class="side-card-title">Precedent strategies</div>
+            <div class="precedent-item">
+              <div class="precedent-name">Maggie's Centre · Leeds</div>
+              <div class="precedent-meta">Heatherwick Studio · 2020 · oncology day treatment</div>
+            </div>
+            <div class="precedent-item">
+              <div class="precedent-name">Memorial Sloan Kettering · Monmouth</div>
+              <div class="precedent-meta">Perkins Eastman · 2019 · acoustic mitigation case</div>
+            </div>
+            <div class="precedent-item">
+              <div class="precedent-name">Royal Marsden Day Unit</div>
+              <div class="precedent-meta">Steffian Bradley · 2021 · privacy partition study</div>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Today's research focus</div>
+            <div style="font-size: 13px; color: var(--ink-soft); line-height: 1.7; font-family: var(--serif); font-style: italic;">
+              "How does partition translucency affect both perceived privacy and perceived enclosure in oncology infusion settings?"
+            </div>
+            <div style="margin-top: 14px; font-size: 11px; color: var(--ink-trace); letter-spacing: 0.06em;">— Working note, Apr 28</div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Knowledge base</div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12px;">
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">FGI Guidelines 2022</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">25 chunks</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Planetree Standards 2021</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">20 chunks</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Peer-reviewed (18 studies)</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">43 chunks</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // ============ ZONE DATA ============
+  const zoneData = {
+    infusion: {
+      eyebrow: 'Largest pain locus · 3 high-severity themes',
+      title: 'Infusion Bay',
+      metrics: [
+        { label: 'Mentions', val: '74' },
+        { label: 'Sentiment', val: '−0.62' },
+        { label: 'Bay count', val: '14' },
+      ],
+      complaints: [
+        'I could hear the alarms from other bays — it made it impossible to nap during chemo.',
+        'The curtains don\'t go all the way down — when I cried, the patient next to me could see me.',
+        'It\'s so cold. I bring two blankets from home now.',
+        'The recliner doesn\'t recline far enough for me to actually sleep.',
+      ],
+      insight: 'The bay is doing too many things at once — it is bedroom, waiting room, and clinical workspace. Patients are asking for acoustic and visual softness; staff are asking for visibility and access. The architecture has to mediate, not pick a side.',
+      recs: [
+        'Bay-to-bay spacing ≥ 8 ft center-to-center',
+        'Partition height 66–72 in (full visual screen)',
+        'NRC ≥ 0.85 ceiling tiles, sound-absorbing fabric',
+        'Target ambient noise ≤ 45 dBA daytime',
+      ],
+    },
+    waiting: {
+      eyebrow: 'Performance index · 79/100 · meeting goal',
+      title: 'Waiting Area',
+      metrics: [
+        { label: 'Mentions', val: '11' },
+        { label: 'Sentiment', val: '+0.12' },
+        { label: 'Avg dwell', val: '38min' },
+      ],
+      complaints: [
+        'The chairs are uncomfortable for someone with bone pain. Hard plastic.',
+        'Why no coffee for family? I drove 90 minutes to get here at 7am.',
+      ],
+      insight: 'The waiting room is performing better than other zones, but minor adjustments — softer seating, family hospitality — would lift it from "tolerable" to "considerate" with minimal capital cost.',
+      recs: [
+        'Add upholstered seating with armrests (min 40% of capacity)',
+        'Family hydration station within sightline of entry',
+        'Lower fixture color temperature to 3000K (currently 4000K)',
+      ],
+    },
+    checkin: {
+      eyebrow: 'Wayfinding gap · 28 first-visit complaints',
+      title: 'Check-in',
+      metrics: [
+        { label: 'Mentions', val: '28' },
+        { label: 'Sentiment', val: '−0.34' },
+        { label: 'First-visit ratio', val: '64%' },
+      ],
+      complaints: [
+        'I walked right past the check-in desk twice. There\'s no clear sign.',
+        'The desk faces sideways from the entrance.',
+        'The clerk is behind glass that\'s hard to hear through.',
+      ],
+      insight: 'The desk geometry has been correct on the floor plan but wrong in lived experience — sightline alone determines arrival ease. A desk rotation of 45° would recover most of the lost legibility without rebuilding casework.',
+      recs: [
+        'Reception desk sightline ≤ 15 ft from entry',
+        'Signage luminance contrast ≥ 70%',
+        'Acoustic transparency at glass (NRC-rated)',
+      ],
+    },
+    nurse: {
+      eyebrow: 'Staff stress hotspot · acoustic fatigue',
+      title: 'Nurse Station',
+      metrics: [
+        { label: 'Mentions', val: '11' },
+        { label: 'Sentiment', val: '−0.41' },
+        { label: 'Coverage', val: '70%' },
+      ],
+      complaints: [
+        'The lighting at the nurse station is fluorescent and harsh. After 12 hours my eyes hurt.',
+        'Documentation is on a wall-mounted computer between bays 6 and 7. I have to turn my back to chart.',
+        'The acoustic environment exhausts me. By the end of shift my nervous system is fried.',
+      ],
+      insight: 'The nurse station is the building\'s most overlooked zone. Staff fatigue here propagates outward — into patient interaction quality, into safety margins. Treat it as a primary, not a back-of-house, condition.',
+      recs: [
+        'Indirect lighting · 3500K · ≤ 35 fc at work surface',
+        'Acoustic ceiling NRC ≥ 0.90 over station',
+        'Mobile workstations to reduce twist-and-chart pattern',
+      ],
+    },
+    family: {
+      eyebrow: 'Underserved zone · companion accommodation',
+      title: 'Family Support',
+      metrics: [
+        { label: 'Mentions', val: '22' },
+        { label: 'Sentiment', val: '−0.28' },
+        { label: 'Companions/day', val: '~38' },
+      ],
+      complaints: [
+        'I drove my mom in for her treatment and there\'s nowhere for me to sit close to her.',
+        'There\'s no place to charge my laptop while I sit with my dad.',
+        'I needed to make a private phone call. There\'s no quiet room.',
+      ],
+      insight: 'Families are the missing client. Every infusion bay needs at least one dignified companion seat with utility access; the program also wants one small acoustic refuge for private calls and difficult conversations.',
+      recs: [
+        '1 companion chair per bay (min 20×24 in, padded)',
+        'Power + USB at every companion position',
+        '1 acoustic phone alcove (NIC ≥ 28) per 10 bays',
+      ],
+    },
+  };
+
+  function renderZone(key) {
+    const z = zoneData[key];
+    const el = document.getElementById('zoneDetail');
+    if (!z) return;
+    el.innerHTML = `
+      <div class="zone-detail-eyebrow">${z.eyebrow}</div>
+      <div class="zone-detail-title">${z.title}</div>
+      <div class="zone-metric-row">
+        ${z.metrics.map(m => `
+          <div class="zm">
+            <div class="zm-label">${m.label}</div>
+            <div class="zm-val">${m.val}</div>
+          </div>`).join('')}
+      </div>
+
+      <div class="zone-section-label">Complaints heard</div>
+      <div>
+        ${z.complaints.map(c => `<div class="complaint-item">${c}</div>`).join('')}
+      </div>
+
+      <div class="ai-insight-box">
+        <div class="ai-insight-label">AI reading</div>
+        ${z.insight}
+      </div>
+
+      <div class="zone-section-label">Design recommendations</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+        ${z.recs.map(r => `<div style="display:flex; gap:10px; align-items:flex-start;"><span style="color:var(--clay); font-family:var(--display); font-style:italic; line-height:1.6;">·</span><span style="color:var(--ink-soft); line-height:1.7;">${r}</span></div>`).join('')}
+      </div>
+    `;
+  }
+
+  // Zone click handler
+  document.querySelectorAll('.zone-rect').forEach(rect => {
+    rect.addEventListener('click', () => {
+      document.querySelectorAll('.zone-rect').forEach(r => r.classList.remove('active'));
+      rect.classList.add('active');
+      renderZone(rect.dataset.zone);
+    });
+  });
+
+  // Initial zone render
+  renderZone('infusion');
+
+  // ============ NAV ============
+  const crumbMap = {
+    dashboard: 'Executive Overview',
+    upload: 'Upload Center',
+    poe: 'POE Insights',
+    zones: 'Spatial Zones',
+    recommendations: 'Recommendations',
+    advisor: 'Design Advisor',
+  };
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const view = item.dataset.view;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelector(`.view[data-view="${view}"]`).classList.add('active');
+      document.getElementById('crumb').textContent = crumbMap[view] || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // ============ CHAT ============
+  const chatBody = document.getElementById('chatBody');
+  const chatInput = document.getElementById('chatInput');
+  const chatSend = document.getElementById('chatSend');
+
+  const chatResponses = {
+    'acoustic': {
+      text: 'For an open infusion bay, layer four interventions: (1) high-NRC ceiling tiles overhead, (2) sound-absorbing fabric on partitions, (3) zoned background masking pumped to ~ 35 dBA, and (4) alarm protocol that escalates visually before audibly. Together they shift the bay from a clinical to a domestic acoustic signature.',
+      dims: [
+        ['Ceiling NRC', '≥ 0.85'],
+        ['Partition acoustic backing', '2 in fiberglass batt'],
+        ['Masking sound level', '32 – 38 dBA'],
+        ['Alarm visual threshold', '< 200 ms before audible'],
+      ],
+      evidence: [
+        '[1] FGI 2022 §3.7-2.2.4',
+        '[2] Pati et al. (2017) — HERD 10(4)',
+        '[3] HERD 18(1), 76–94',
+      ],
+    },
+    'family': {
+      text: 'Family programming has two scales. At the bay scale, one companion chair with utility (power + USB) is the minimum dignity threshold. At the floor scale, a single private acoustic alcove serves the most painful conversations — diagnosis reception, family calls. Both are inexpensive; both are routinely omitted.',
+      dims: [
+        ['Companion chair size', 'min 20 × 24 in'],
+        ['Power + USB outlets', '1 per chair'],
+        ['Acoustic alcove NIC', '≥ 28'],
+        ['Alcove count', '1 per 10 bays'],
+      ],
+      evidence: [
+        '[1] Planetree (2021) — family inclusion principles',
+        '[2] Pati et al. (2017) — HERD 10(4)',
+        '[3] Memorial CC partner data — 22 family records',
+      ],
+    },
+    'staff': {
+      text: 'Three precedents handle staff acoustic fatigue at distinctly different scales. Maggie\'s Leeds uses domestic-scale enclosure to isolate the nurse alcove. Sloan Kettering Monmouth introduces masking sound calibrated below patient threshold. The Royal Marsden Day Unit experiments with absorptive partition envelopes. Each is worth a precedent study before specifying.',
+      dims: [
+        ['Maggie\'s Leeds — typology', 'Domestic alcove'],
+        ['Sloan Kettering — strategy', 'Sound masking 32 dBA'],
+        ['Royal Marsden — partition', 'Absorptive envelope'],
+      ],
+      evidence: [
+        '[1] Heatherwick Studio — Maggie\'s Leeds (2020)',
+        '[2] Perkins Eastman — MSK Monmouth (2019)',
+        '[3] Cai &amp; Zimring (2018)',
+      ],
+    },
+    'default': {
+      text: 'I have not yet indexed that specific question. Let me retrieve what is closest. In general, partition height between 66–72 in preserves visual privacy at the head and lap while preserving nurse station scan-ability through a translucent upper band.',
+      dims: [
+        ['Partition height (opaque)', '66 – 72 in'],
+        ['Translucent band', '12 in (84 in total)'],
+      ],
+      evidence: [
+        '[1] FGI 2022 §3.7-2.2.4',
+        '[2] Cai &amp; Zimring (2018)',
+      ],
+    },
+  };
+
+  function classify(q) {
+    q = q.toLowerCase();
+    if (/acoust|noise|sound|quiet/.test(q)) return 'acoustic';
+    if (/family|companion|relative|seat/.test(q)) return 'family';
+    if (/staff|nurse|fatigue|precedent/.test(q)) return 'staff';
+    return 'default';
+  }
+
+  function appendMessage(role, contentHTML) {
+    const msg = document.createElement('div');
+    msg.className = 'msg' + (role === 'user' ? ' user' : '');
+    msg.innerHTML = `
+      <div class="msg-avatar"${role === 'user' ? '' : ' style="font-family: var(--display);"'}>${role === 'user' ? 'YL' : '心'}</div>
+      <div class="msg-body">${contentHTML}</div>
+    `;
+    chatBody.appendChild(msg);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function sendChat(text) {
+    if (!text.trim()) return;
+    appendMessage('user', text);
+
+    const r = chatResponses[classify(text)];
+    setTimeout(() => {
+      const dims = r.dims.map(d => `<div class="msg-dim"><span class="dim-k">${d[0]}</span><span>${d[1]}</span></div>`).join('');
+      const evidence = r.evidence.map(e => `<span class="msg-ev-item">${e}</span>`).join('');
+      const html = `
+        ${r.text}
+        <div class="msg-dim-list">${dims}</div>
+        <div class="msg-evidence">
+          <div class="msg-evidence-label">Evidence chain</div>
+          ${evidence}
+        </div>
+      `;
+      appendMessage('assistant', html);
+    }, 520);
+
+    chatInput.value = '';
+  }
+
+  chatSend.addEventListener('click', () => sendChat(chatInput.value));
+  chatInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendChat(chatInput.value);
+  });
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => sendChat(chip.dataset.q));
+  });
+
+  // ============ ANIMATE METRIC BARS ON LOAD ============
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.metric-bar-fill').forEach(bar => {
+      const w = bar.style.width;
+      bar.style.width = '0';
+      requestAnimationFrame(() => {
+        setTimeout(() => bar.style.width = w, 100);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
