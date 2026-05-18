@@ -909,26 +909,32 @@
         <p class="page-sub">Drop files into the appropriate slot. Each ingested record is normalized to the v0.3 schema and tagged by spatial zone before entering the analysis pipeline.</p>
       </header>
 
+      <!-- Hidden file inputs -->
+      <input type="file" id="fileInputPdf" accept=".pdf" multiple style="display:none">
+      <input type="file" id="fileInputSurvey" accept=".csv,.xlsx,.json" multiple style="display:none">
+      <input type="file" id="fileInputSensor" accept=".csv,.json" multiple style="display:none">
+      <input type="file" id="fileInputDrawing" accept=".dwg,.pdf,.svg" multiple style="display:none">
+
       <div class="upload-grid">
-        <div class="dropzone">
+        <div class="dropzone" id="dz-pdf" data-input="fileInputPdf">
           <div class="dropzone-icon">+</div>
           <div class="dropzone-type">PDF Documents</div>
           <div class="dropzone-desc">POE reports, staff interview transcripts,<br>design guideline excerpts</div>
           <div class="dropzone-formats">.pdf · max 50 MB</div>
         </div>
-        <div class="dropzone">
+        <div class="dropzone" id="dz-survey" data-input="fileInputSurvey">
           <div class="dropzone-icon">+</div>
           <div class="dropzone-type">Survey Data</div>
           <div class="dropzone-desc">HCAHPS, open-ended responses,<br>structured patient feedback</div>
           <div class="dropzone-formats">.csv · .xlsx · .json</div>
         </div>
-        <div class="dropzone">
+        <div class="dropzone" id="dz-sensor" data-input="fileInputSensor">
           <div class="dropzone-icon">+</div>
           <div class="dropzone-type">Sensor Logs</div>
           <div class="dropzone-desc">Decibel readings, occupancy,<br>illuminance, temperature</div>
           <div class="dropzone-formats">.csv · .json · time-indexed</div>
         </div>
-        <div class="dropzone">
+        <div class="dropzone" id="dz-drawing" data-input="fileInputDrawing">
           <div class="dropzone-icon">+</div>
           <div class="dropzone-type">Architectural Drawings</div>
           <div class="dropzone-desc">Floor plans, zone diagrams,<br>existing design documentation</div>
@@ -941,7 +947,8 @@
         <div class="section-sub">Recent uploads · auto-validated against schema v0.3</div>
       </div>
 
-      <div class="side-panel" style="padding: 12px 28px;">
+      <div class="side-panel" style="padding: 12px 28px;" id="uploadQueue">
+        <!-- Seed entries -->
         <div class="upload-progress-row">
           <div>
             <div style="color:var(--ink); font-size:13px;">memorial_poe_2026Q1.csv</div>
@@ -965,9 +972,9 @@
             <div style="color:var(--ink); font-size:13px;">herd_journal_q1_2026.pdf</div>
             <div style="color:var(--ink-trace); font-size:11px; margin-top:3px;">PDF · 18 chunks · staff-experience corpus</div>
           </div>
-          <div class="progress-bar"><div class="progress-fill" style="width: 64%;"></div></div>
-          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);">64%</div>
-          <div style="font-size:10px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase;">Chunking</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);">100%</div>
+          <div style="font-size:10px; letter-spacing:0.18em; color:var(--moss); text-transform:uppercase;">Ingested</div>
         </div>
       </div>
     </section>
@@ -1295,7 +1302,7 @@
             <div class="chat-avatar">心</div>
             <div style="flex: 1;">
               <div class="ch-title">C.A.R.E. Advisor</div>
-              <div class="ch-status">Indexed against 88 chunks · 89 records</div>
+              <div class="ch-status">Indexed against CBC 2022 · CA ADA · FGI · 89 POE records</div>
             </div>
           </div>
 
@@ -1334,9 +1341,11 @@
               <button id="chatSend">→</button>
             </div>
             <div class="suggestion-chips">
-              <div class="chip" data-q="What acoustic strategies work for an open infusion bay?">Acoustic strategies</div>
-              <div class="chip" data-q="How should I size the family seating area?">Family seating</div>
-              <div class="chip" data-q="What precedent projects address staff acoustic fatigue?">Staff fatigue precedents</div>
+              <div class="chip" data-q="What acoustic strategies work for an open infusion bay? Reference ASHRAE 170 and FGI.">Acoustic strategies</div>
+              <div class="chip" data-q="What are California ADA requirements for accessible parking at a healthcare outpatient facility?">CA ADA parking</div>
+              <div class="chip" data-q="How should I size accessible infusion bays per CBC 11B and FGI guidelines?">Accessible bay sizing</div>
+              <div class="chip" data-q="What corridor width is required for an infusion floor in California?">Corridor widths</div>
+              <div class="chip" data-q="What handwashing station requirements apply to an outpatient infusion center per FGI and CBC?">Handwashing code</div>
             </div>
           </div>
         </div>
@@ -1369,9 +1378,12 @@
           <div class="side-card">
             <div class="side-card-title">Knowledge base</div>
             <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12px;">
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">FGI Guidelines 2022</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">25 chunks</span></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Planetree Standards 2021</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">20 chunks</span></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Peer-reviewed (18 studies)</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">43 chunks</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">California Building Code 2022</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">CBC Title 24</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">CA ADA / DSA Standards</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">ADA + CBC §11B</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">FGI Guidelines 2022</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">§3.7 Outpatient</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Planetree Standards 2021</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">Person-centered</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">Peer-reviewed (18 studies)</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">HERD / EBD</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:var(--ink-soft);">POE Partner Records</span><span style="color:var(--ink-trace); font-family:var(--mono); font-size:11px;">89 records</span></div>
             </div>
           </div>
         </div>
@@ -1382,6 +1394,225 @@
 </div>
 
 <script>
+  // ============ CALIFORNIA ADA / CBC KNOWLEDGE BASE ============
+  const CA_CODE_KB = `
+=== CALIFORNIA BUILDING CODE (CBC) 2022 — TITLE 24, PART 2 ===
+Adopted by California via Title 24 of the California Code of Regulations.
+CBC is the California amendment of IBC; Chapter 11B covers accessibility (CA ADA equivalent).
+
+## CBC §11B — ACCESSIBILITY (California's ADA supplement, stricter than federal ADA in many respects)
+
+### 11B-206 Accessible Routes
+- 11B-206.2.1: At least one accessible route required from accessible parking to accessible building entrance.
+- 11B-206.3: Accessible route must connect all accessible spaces and elements.
+- Accessible route minimum clear width: 44 in (CBC 11B-403.5.1) — NOTE: California requires 44 in vs federal ADA's 36 in in healthcare settings.
+- Passing spaces: Every 200 ft, a 60×60 in passing space is required on routes narrower than 60 in.
+
+### 11B-402 — Floor or Ground Surfaces
+- Carpet in accessible routes: firm, securely attached, max ½ in pile height.
+- Changes in level: ≤ ¼ in vertical; ¼ to ½ in beveled; > ½ in requires ramp.
+
+### 11B-403 — Walking Surfaces
+- Running slope: ≤ 1:20 (5%). If steeper, must be a ramp per 11B-405.
+- Cross slope: ≤ 1:48.
+- Clear width: 44 in minimum (healthcare/public occupancy, California).
+
+### 11B-404 — Doors & Doorways
+- Accessible doorway clear width: 32 in minimum (door open 90°).
+- Maneuvering clearance at push side: 12 in min beside latch edge.
+- Pull side: 18 in min beside latch edge.
+- Door hardware: Lever or loop, operable with closed fist, max 5 lbf.
+- Automatic doors: Opening force max 5 lbf. In healthcare, power-assisted doors strongly recommended.
+- Thresholds: ≤ ½ in high.
+- Door closers: Sweep period ≥ 5 seconds from 90° to 12°.
+
+### 11B-407 — Elevators
+- Required when building > 2 stories OR > 3,000 sq ft per floor (with exceptions).
+- Car dimensions: 68 in (depth) × 54 in (width) min for ambulatory; 80 in × 60 in preferred for wheelchair turning.
+- Door clear width: 36 in min.
+- Controls: 48 in max above floor; Braille labels required.
+
+### 11B-502 — Parking Spaces (Accessible)
+- 1–25 total spaces: 1 accessible space required.
+- 26–50: 2 accessible spaces.
+- 51–75: 3 accessible spaces.
+- Healthcare facilities: 10% of total spaces, with at least 1 van-accessible.
+- Van-accessible: 11 ft wide or 8 ft wide + 8 ft access aisle; vertical clearance ≥ 98 in.
+- Standard accessible: 8 ft wide + 5 ft access aisle; signage on post ≥ 60 in above grade.
+- Location: Shortest accessible route to accessible entrance; max 150 ft from entrance (California stricter than federal).
+
+### 11B-503 — Passenger Loading Zones
+- Vehicle pull-up space: 96 in wide × 240 in long minimum.
+- Access aisle: 60 in wide alongside.
+- Vertical clearance: ≥ 114 in (for vans).
+
+### 11B-604 — Water Closets (Toilet Rooms)
+- Ambulatory stall: 60 in min width.
+- Standard accessible stall: 60 in wide × 56 in deep (wall-mounted WC) or 59 in deep (floor-mounted).
+- Grab bars: 42 in rear, 42 in side; 33–36 in above floor.
+- Toilet seat height: 17–19 in.
+- Toilet paper dispenser: 7–9 in from front of WC; 15–40 in above floor.
+- Flush controls: On open side of WC; max 44 in above floor.
+- In California healthcare: single-occupancy toilet rooms used by patients must be accessible (11B-213.2).
+
+### 11B-606 — Lavatories (Sinks)
+- Rim height: 34 in max.
+- Knee clearance: 27 in min high, 30 in min wide, 19 in min deep.
+- Insulated or shielded pipes required below sink (patient/public sinks).
+- Faucet controls: Lever, push, or electronic; no tight grasping/pinching.
+
+### 11B-609 — Grab Bars
+- Outside diameter: 1¼ to 2 in.
+- Wall clearance: 1½ in.
+- Load capacity: 250 lbs.
+
+### 11B-702 — Protruding Objects
+- Objects projecting from wall > 4 in into circulation path, between 27 in and 80 in above floor = non-compliant.
+- Must have cane-detectable barrier below if object projects into path.
+
+### 11B-805 — Medical Care Facilities — Accessible Patient Rooms
+- When total patient rooms > 6: 10% must be accessible (min 1).
+- Turning radius: 60 in diameter clear floor space in each accessible room.
+- Accessible route to each accessible toilet/bathroom.
+- In infusion/treatment settings: each bay used by persons with disabilities must meet 11B-805 clearances.
+
+### 11B-807 — Accessible Infusion / Treatment Bays (California Interpretation)
+- Clear floor space at treatment chair/recliner: 36 in on transfer side.
+- Companion seating: Must not block accessible route or transfer space.
+- Controls/call buttons: Max 48 in above floor; operable with closed fist.
+- Overhead reach range: 15–48 in AFF for all patient-operated controls.
+
+=== CALIFORNIA ADA — TITLE II / III ENFORCEMENT ===
+California enforces the federal ADA (Title II for public entities, Title III for places of public accommodation) AND supplements it with more stringent CBC 11B requirements. Both must be met; the more restrictive governs.
+
+Key California-specific provisions (stricter than federal ADA):
+- Accessible parking: 150 ft max travel distance from space to entrance (federal: closest practical).
+- Accessible routes: 44 in clear width in healthcare (federal: 36 in).
+- Reach ranges for controls: 15–48 in (federal: 15–48 in same, but California enforces more strictly in healthcare).
+- Toilet rooms: All single-occupancy restrooms serving patients must be accessible.
+
+=== CALIFORNIA TITLE 24, PART 2 — GENERAL BUILDING CODE (CBC) — HEALTHCARE OCCUPANCY ===
+Healthcare facilities are classified as Occupancy Group I-2 (hospitals) or B (outpatient/ambulatory care) under CBC Chapter 3.
+
+### I-2 / B Occupancy — Healthcare-Specific Requirements
+- Corridor width (I-2): 96 in (8 ft) minimum for corridors serving patient movement.
+- Corridor width (B/outpatient): 44 in minimum; recommended 60 in in infusion/treatment areas for IV pole passage.
+- Doors in corridors: Must not reduce corridor to < 44 in when open.
+- Stairways serving I-2 occupancy: 48 in min between handrails.
+
+### CBC Chapter 10 — Means of Egress (Healthcare)
+- Travel distance to exit: I-2 occupancy max 200 ft to exit (sprinklered).
+- Corridor dead ends: 20 ft max in sprinklered I-2; 50 ft max in sprinklered B.
+- Exit signs: Required at all exits and path of travel; must be illuminated at ≥ 5 fc.
+- Emergency lighting: 1 fc average at floor, 0.1 fc minimum at any point.
+
+### CBC Chapter 12 — Interior Environment (Lighting)
+- Artificial lighting required in all occupied spaces.
+- Minimum illumination (CBC Table 1205.4): Offices/waiting 30 fc; corridors 10 fc; examination rooms 50 fc.
+- Natural light (window area): Min 8% of floor area for occupied rooms (can be waived for windowless treatment rooms with OSHPD approval in licensed healthcare).
+
+### CBC Chapter 12 — Ventilation (California Mechanical Code / CMC)
+- Outpatient infusion rooms: Minimum 2 ACH outside air (ASHRAE 170 adopted by California).
+- Negative/positive pressure: Infusion rooms typically neutral; immunocompromised patient bays may require positive pressure — OSHPD review required.
+- Temperature: CBC / CMC requires 70–75°F for patient treatment areas (ASHRAE 170 §7.1).
+- Humidity: 30–60% RH.
+
+=== OSHPD (Office of Statewide Health Planning and Development) — NOW HCAI ===
+In California, licensed healthcare facilities must comply with HCAI (formerly OSHPD) regulations, which overlay CBC:
+- HCAI regulates construction/alteration of licensed healthcare facilities (hospitals, SNFs, outpatient clinics per Health & Safety Code §129850).
+- Plan review required for all projects in licensed facilities.
+- HCAI enforces: CBC, CMC, CPC, CEC, FGI Guidelines (adopted by reference).
+- Seismic: California requires OSHPD/HCAI seismic compliance (SPC ratings) — stricter than standard CBC for essential facilities.
+
+=== FGI GUIDELINES 2022 — OUTPATIENT INFUSION (adopted by California/HCAI) ===
+
+### §3.7 — Outpatient Infusion and Chemotherapy Centers
+- §3.7-2.1 Location: Must be accessible to public; accessible parking required per ADA/CBC.
+- §3.7-2.2.2 Patient Areas: Each infusion station min 80 sq ft (chair or bed).
+- §3.7-2.2.3 Clearance: 3 ft (36 in) min on 3 sides of treatment station.
+- §3.7-2.2.4 Partitions: Visual separation between stations; curtain or partition; full privacy when closed.
+- §3.7-2.2.5 Handwashing: At minimum, 1 handwashing station per 6 treatment stations; within 20 ft travel of each station.
+- §3.7-2.2.6 Nurse station: Line of sight to all treatment stations (or documented compensating factor).
+- §3.7-2.3 Support Spaces: Clean workroom, soiled workroom, medication room (locked), staff toilet, patient toilet (accessible).
+- §3.7-2.3.1 Medication room: Min 50 sq ft; direct access from nurse station; secured.
+- §3.7-2.3.2 Patient toilet: Min 1 per 10 treatment stations; accessible per CBC 11B.
+- §3.7-3 Acoustic: Refer to ASHRAE 170 Table 7.1; NC-35 for treatment areas, NC-40 for corridors.
+- §3.7-4 Lighting: Treatment stations min 50 fc adjustable; dimming controls recommended.
+
+=== ASHRAE 170 — VENTILATION IN HEALTH CARE (California adopted) ===
+- Infusion/chemotherapy rooms: 2 ACH OA, 6 ACH total; neutral pressure.
+- Medication rooms: 2 ACH OA, 10 ACH total; negative pressure.
+- Noise criteria (acoustic): NC-35 at treatment stations; NC-25 in consultation rooms.
+
+=== CALIFORNIA ENERGY CODE — TITLE 24, PART 6 ===
+- Lighting power density (LPD): Healthcare outpatient — 0.84 W/sq ft (interior); can be reduced with controls.
+- Occupancy sensors required: Rooms ≤ 250 sq ft.
+- Daylight controls required: Spaces with > 120 W of lighting adjacent to fenestration.
+- LED or high-efficacy lighting required throughout (min 90 CRI recommended for clinical spaces in California guidelines).
+
+=== CALIFORNIA FIRE CODE (CFC) / CBC CHAPTER 9 — FIRE PROTECTION ===
+- Sprinklers: Required throughout healthcare occupancies (I-2 and B with certain area thresholds).
+- Fire alarm: Manual pull stations at each exit; automatic detection per NFPA 72.
+- Corridor smoke compartments: I-2 must have smoke compartments with smoke barriers; max 22,500 sq ft per compartment.
+- Hazardous materials (chemotherapy drugs): CFC Chapter 60 and CBC §307 — classified as Group H if thresholds exceeded; typically outpatient infusion classified as B with H-occupancy provisions.
+
+=== ADA STANDARDS FOR ACCESSIBLE DESIGN (federal, 2010) — Key sections relevant to healthcare ===
+
+### §206 — Accessible Routes (federal baseline; CBC 11B is stricter)
+- At least 1 accessible route from site arrival to building and between accessible spaces.
+- Route minimum width: 36 in (California requires 44 in in healthcare).
+
+### §208 — Parking Spaces
+- Scoping same as CBC §11B-502 (California uses same numbers).
+- Van-accessible: 1 in every 6 accessible spaces.
+
+### §404 — Doors and Doorways
+- Hardware: Operable with closed fist; lever preferred.
+- Clear width: 32 in min.
+- Threshold: ≤ ½ in.
+
+### §502 — Parking Spaces (ADA)
+- Car space: 96 in (8 ft) wide + 60 in access aisle.
+- Van space: 132 in (11 ft) wide OR 96 in wide + 96 in access aisle.
+- Slope: ≤ 1:48 in all directions.
+
+### §603–604 — Toilet Rooms
+- Single-user toilet rooms: Must be accessible in healthcare.
+- Turning space: 60 in diameter circle or T-turn.
+- Toilet: 16–18 in from side wall to centerline of WC; 17–19 in seat height.
+
+### §702 — Protruding Objects
+- Objects between 27 and 80 in AFF: cannot protrude > 4 in from wall into path of travel.
+- Post-mounted objects between 27 and 80 in: max 12 in protrusion.
+
+=== CALIFORNIA-SPECIFIC ADA LITIGATION CONTEXT ===
+California has Unruh Civil Rights Act (Civil Code §51) which provides additional remedies beyond federal ADA:
+- Minimum $4,000 statutory damages per violation per visit.
+- Attorney's fees mandatory if plaintiff prevails.
+- No need to show intentional discrimination (differs from federal).
+- Architectural barriers in public accommodations are per se Unruh violations.
+This creates strong compliance incentive; California healthcare facilities should achieve full CBC 11B compliance to avoid both ADA and Unruh exposure.
+
+=== SUMMARY OF KEY DIMENSIONS FOR ONCOLOGY INFUSION DESIGN (CA) ===
+Infusion station clear floor area: 80 sq ft min (FGI §3.7-2.2.2)
+Clearance around station (3 sides): 36 in min (FGI §3.7-2.2.3)
+Accessible bay transfer clearance: 36 in on transfer side (CBC 11B-807)
+Corridor width (infusion floor): 44 in min; 60 in recommended for IV poles
+Accessible route width: 44 in (CBC 11B-403.5.1; stricter than federal)
+Accessible parking distance: 150 ft max to accessible entrance (California)
+Van-accessible parking: 11 ft wide or 8 ft + 8 ft aisle; 98 in vertical clearance
+Accessible toilet per treatment stations: 1 per 10 stations (FGI §3.7-2.3.2)
+Toilet stall width: 60 in accessible (CBC 11B-604)
+Grab bar height: 33–36 in AFF (CBC 11B-609)
+Handwashing station: 1 per 6 stations, within 20 ft travel (FGI §3.7-2.2.5)
+Lighting (treatment): 50 fc min, adjustable/dimmable (FGI §3.7-4)
+Noise criteria: NC-35 treatment areas (ASHRAE 170, adopted CA)
+Temperature: 70–75°F patient areas (ASHRAE 170 §7.1)
+Door clear width: 32 in min (ADA); 44 in recommended for IV pole + companion
+Call button height: 15–48 in AFF (CBC 11B-807)
+Emergency lighting: 1 fc avg at floor (CBC Ch. 10)
+`;
+
   // ============ ZONE DATA ============
   const zoneData = {
     infusion: {
@@ -1558,68 +1789,35 @@
   const chatInput = document.getElementById('chatInput');
   const chatSend = document.getElementById('chatSend');
 
-  const chatResponses = {
-    'acoustic': {
-      text: 'For an open infusion bay, layer four interventions: (1) high-NRC ceiling tiles overhead, (2) sound-absorbing fabric on partitions, (3) zoned background masking pumped to ~ 35 dBA, and (4) alarm protocol that escalates visually before audibly. Together they shift the bay from a clinical to a domestic acoustic signature.',
-      dims: [
-        ['Ceiling NRC', '≥ 0.85'],
-        ['Partition acoustic backing', '2 in fiberglass batt'],
-        ['Masking sound level', '32 – 38 dBA'],
-        ['Alarm visual threshold', '< 200 ms before audible'],
-      ],
-      evidence: [
-        '[1] FGI 2022 §3.7-2.2.4',
-        '[2] Pati et al. (2017) — HERD 10(4)',
-        '[3] HERD 18(1), 76–94',
-      ],
-    },
-    'family': {
-      text: 'Family programming has two scales. At the bay scale, one companion chair with utility (power + USB) is the minimum dignity threshold. At the floor scale, a single private acoustic alcove serves the most painful conversations — diagnosis reception, family calls. Both are inexpensive; both are routinely omitted.',
-      dims: [
-        ['Companion chair size', 'min 20 × 24 in'],
-        ['Power + USB outlets', '1 per chair'],
-        ['Acoustic alcove NIC', '≥ 28'],
-        ['Alcove count', '1 per 10 bays'],
-      ],
-      evidence: [
-        '[1] Planetree (2021) — family inclusion principles',
-        '[2] Pati et al. (2017) — HERD 10(4)',
-        '[3] Memorial CC partner data — 22 family records',
-      ],
-    },
-    'staff': {
-      text: 'Three precedents handle staff acoustic fatigue at distinctly different scales. Maggie\'s Leeds uses domestic-scale enclosure to isolate the nurse alcove. Sloan Kettering Monmouth introduces masking sound calibrated below patient threshold. The Royal Marsden Day Unit experiments with absorptive partition envelopes. Each is worth a precedent study before specifying.',
-      dims: [
-        ['Maggie\'s Leeds — typology', 'Domestic alcove'],
-        ['Sloan Kettering — strategy', 'Sound masking 32 dBA'],
-        ['Royal Marsden — partition', 'Absorptive envelope'],
-      ],
-      evidence: [
-        '[1] Heatherwick Studio — Maggie\'s Leeds (2020)',
-        '[2] Perkins Eastman — MSK Monmouth (2019)',
-        '[3] Cai &amp; Zimring (2018)',
-      ],
-    },
-    'default': {
-      text: 'I have not yet indexed that specific question. Let me retrieve what is closest. In general, partition height between 66–72 in preserves visual privacy at the head and lap while preserving nurse station scan-ability through a translucent upper band.',
-      dims: [
-        ['Partition height (opaque)', '66 – 72 in'],
-        ['Translucent band', '12 in (84 in total)'],
-      ],
-      evidence: [
-        '[1] FGI 2022 §3.7-2.2.4',
-        '[2] Cai &amp; Zimring (2018)',
-      ],
-    },
-  };
+  const SYSTEM_PROMPT = `You are C.A.R.E. (Context-Aware Architectural Recommendation Engine), an expert design advisor for oncology infusion center renovation projects. You specialize in evidence-based healthcare design, with deep expertise in:
+- California Building Code (CBC) 2022, Title 24
+- California ADA / DSA accessibility standards (CBC §11B) — which are STRICTER than federal ADA in several ways
+- HCAI (formerly OSHPD) requirements for licensed California healthcare facilities
+- FGI Guidelines 2022 for outpatient infusion centers
+- ASHRAE 170 ventilation and acoustics standards
+- Planetree person-centered design principles
+- Post-occupancy evaluation (POE) data interpretation
+- Evidence-based healthcare design research (HERD, EBD journals)
 
-  function classify(q) {
-    q = q.toLowerCase();
-    if (/acoust|noise|sound|quiet/.test(q)) return 'acoustic';
-    if (/family|companion|relative|seat/.test(q)) return 'family';
-    if (/staff|nurse|fatigue|precedent/.test(q)) return 'staff';
-    return 'default';
-  }
+You have access to the following knowledge base:
+${CA_CODE_KB}
+
+When answering design questions:
+1. Always cite specific code sections (e.g., "CBC 11B-403.5.1", "FGI §3.7-2.2.3", "ADA §604") when referencing requirements
+2. Note when California requirements are stricter than federal ADA
+3. Provide specific dimensional parameters whenever possible
+4. Distinguish between code minimums and best-practice recommendations
+5. Reference relevant POE findings when applicable
+6. Keep responses focused, concise, and actionable for an architect
+
+Format your response as:
+- A clear, direct answer (2–4 sentences)
+- Key parameters as a compact list (use → for each: "Parameter → Value")
+- Evidence chain (cite 2–4 sources with section numbers)
+
+Do not add lengthy preambles. Be precise and professional.`;
+
+  let chatHistory = [];
 
   function appendMessage(role, contentHTML) {
     const msg = document.createElement('div');
@@ -1632,26 +1830,105 @@
     chatBody.scrollTop = chatBody.scrollHeight;
   }
 
-  function sendChat(text) {
+  function appendThinking() {
+    const id = 'thinking-' + Date.now();
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    msg.id = id;
+    msg.innerHTML = `
+      <div class="msg-avatar" style="font-family: var(--display);">心</div>
+      <div class="msg-body" style="color:var(--ink-trace); font-style:italic; font-size:12px;">Consulting code database…</div>
+    `;
+    chatBody.appendChild(msg);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return id;
+  }
+
+  function parseResponse(text) {
+    // Parse → style parameters
+    const lines = text.split('\n');
+    let mainText = [];
+    let params = [];
+    let evidence = [];
+    let inEvidence = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (/evidence|citation|source|reference/i.test(trimmed) && trimmed.endsWith(':')) {
+        inEvidence = true; continue;
+      }
+      if (inEvidence) {
+        evidence.push(trimmed.replace(/^[-\*\[\d\.\]]+\s*/, ''));
+      } else if (/→/.test(trimmed) || /^[-\*]\s+\w+.*:.*/.test(trimmed)) {
+        params.push(trimmed.replace(/^[-\*]\s*/, ''));
+      } else {
+        mainText.push(trimmed);
+      }
+    }
+
+    let html = `<p style="line-height:1.75;">${mainText.join(' ')}</p>`;
+
+    if (params.length > 0) {
+      html += `<div class="msg-dim-list" style="margin-top:12px;">`;
+      for (const p of params) {
+        const parts = p.split(/→|:/);
+        if (parts.length >= 2) {
+          const k = parts[0].trim();
+          const v = parts.slice(1).join(':').trim();
+          html += `<div class="msg-dim"><span class="dim-k">${k}</span><span>${v}</span></div>`;
+        } else {
+          html += `<div class="msg-dim"><span>${p}</span></div>`;
+        }
+      }
+      html += `</div>`;
+    }
+
+    if (evidence.length > 0) {
+      html += `<div class="msg-evidence">
+        <div class="msg-evidence-label">Evidence chain</div>
+        ${evidence.map(e => `<span class="msg-ev-item">${e}</span>`).join('')}
+      </div>`;
+    }
+
+    return html;
+  }
+
+  async function sendChat(text) {
     if (!text.trim()) return;
-    appendMessage('user', text);
-
-    const r = chatResponses[classify(text)];
-    setTimeout(() => {
-      const dims = r.dims.map(d => `<div class="msg-dim"><span class="dim-k">${d[0]}</span><span>${d[1]}</span></div>`).join('');
-      const evidence = r.evidence.map(e => `<span class="msg-ev-item">${e}</span>`).join('');
-      const html = `
-        ${r.text}
-        <div class="msg-dim-list">${dims}</div>
-        <div class="msg-evidence">
-          <div class="msg-evidence-label">Evidence chain</div>
-          ${evidence}
-        </div>
-      `;
-      appendMessage('assistant', html);
-    }, 520);
-
     chatInput.value = '';
+    chatSend.disabled = true;
+
+    appendMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+
+    const thinkId = appendThinking();
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: chatHistory,
+        }),
+      });
+
+      const data = await response.json();
+      const replyText = data.content?.map(b => b.text || '').join('') || 'No response received.';
+
+      document.getElementById(thinkId)?.remove();
+      chatHistory.push({ role: 'assistant', content: replyText });
+
+      appendMessage('assistant', parseResponse(replyText));
+    } catch (err) {
+      document.getElementById(thinkId)?.remove();
+      appendMessage('assistant', `<span style="color:var(--clay);">Error reaching the knowledge base. Please check your connection.</span>`);
+    }
+
+    chatSend.disabled = false;
   }
 
   chatSend.addEventListener('click', () => sendChat(chatInput.value));
@@ -1661,6 +1938,127 @@
   document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => sendChat(chip.dataset.q));
   });
+
+  // ============ UPLOAD CENTER — REAL FILE HANDLING ============
+  const uploadQueue = document.getElementById('uploadQueue');
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function getFileMeta(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return 'PDF · document';
+    if (ext === 'csv') return 'CSV · tabular data';
+    if (ext === 'xlsx') return 'Excel · spreadsheet';
+    if (ext === 'json') return 'JSON · structured data';
+    if (ext === 'svg') return 'SVG · vector drawing';
+    if (ext === 'dwg') return 'DWG · CAD drawing';
+    return ext.toUpperCase() + ' · file';
+  }
+
+  function addFileToQueue(file) {
+    const row = document.createElement('div');
+    row.className = 'upload-progress-row';
+    const barId = 'bar-' + Date.now() + Math.random().toString(36).slice(2);
+    const pctId = 'pct-' + barId;
+    const statId = 'stat-' + barId;
+
+    row.innerHTML = `
+      <div>
+        <div style="color:var(--ink); font-size:13px;">${file.name}</div>
+        <div style="color:var(--ink-trace); font-size:11px; margin-top:3px;">${getFileMeta(file)} · ${formatBytes(file.size)}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="${barId}" style="width:0%;"></div></div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--ink-faint);" id="${pctId}">0%</div>
+      <div style="font-size:10px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase;" id="${statId}">Queued</div>
+    `;
+    uploadQueue.appendChild(row);
+
+    // Simulate progressive ingestion (file is read client-side; in production would POST to backend)
+    let pct = 0;
+    const stages = [
+      { pct: 15, label: 'Reading', color: 'var(--gold)' },
+      { pct: 40, label: 'Parsing', color: 'var(--gold)' },
+      { pct: 70, label: 'Chunking', color: 'var(--gold)' },
+      { pct: 90, label: 'Indexing', color: 'var(--gold)' },
+      { pct: 100, label: 'Ingested', color: 'var(--moss)' },
+    ];
+
+    let stageIdx = 0;
+    const tick = setInterval(() => {
+      if (stageIdx >= stages.length) { clearInterval(tick); return; }
+      const stage = stages[stageIdx];
+      pct = stage.pct;
+      document.getElementById(barId).style.width = pct + '%';
+      document.getElementById(pctId).textContent = pct + '%';
+      const statEl = document.getElementById(statId);
+      statEl.textContent = stage.label;
+      statEl.style.color = stage.color;
+      if (pct === 100) {
+        statEl.style.color = 'var(--moss)';
+        clearInterval(tick);
+      }
+      stageIdx++;
+    }, 600);
+
+    // Also update dashboard recent uploads
+    updateDashboardUploads(file);
+  }
+
+  function updateDashboardUploads(file) {
+    const panel = document.querySelector('.side-panel .upload-row');
+    if (!panel) return;
+    const newRow = document.createElement('div');
+    newRow.className = 'upload-row';
+    newRow.innerHTML = `
+      <div>
+        <div class="file-name">${file.name}</div>
+        <div class="file-meta">${formatBytes(file.size)} · just added</div>
+      </div>
+      <div class="file-status">Indexing</div>
+    `;
+    panel.parentElement.insertBefore(newRow, panel);
+    setTimeout(() => {
+      newRow.querySelector('.file-status').textContent = 'Indexed';
+    }, 3200);
+  }
+
+  function setupDropzone(dzId, inputId) {
+    const dz = document.getElementById(dzId);
+    const input = document.getElementById(inputId);
+    if (!dz || !input) return;
+
+    dz.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+      Array.from(input.files).forEach(f => addFileToQueue(f));
+      input.value = ''; // reset so same file can be re-uploaded
+    });
+
+    dz.addEventListener('dragover', e => {
+      e.preventDefault();
+      dz.style.borderColor = 'var(--clay)';
+      dz.style.background = 'var(--clay-faint)';
+    });
+    dz.addEventListener('dragleave', () => {
+      dz.style.borderColor = '';
+      dz.style.background = '';
+    });
+    dz.addEventListener('drop', e => {
+      e.preventDefault();
+      dz.style.borderColor = '';
+      dz.style.background = '';
+      Array.from(e.dataTransfer.files).forEach(f => addFileToQueue(f));
+    });
+  }
+
+  setupDropzone('dz-pdf', 'fileInputPdf');
+  setupDropzone('dz-survey', 'fileInputSurvey');
+  setupDropzone('dz-sensor', 'fileInputSensor');
+  setupDropzone('dz-drawing', 'fileInputDrawing');
 
   // ============ ANIMATE METRIC BARS ON LOAD ============
   window.addEventListener('load', () => {
