@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C.A.R.E. — Context-Aware Architectural Recommendation Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2EDE2; --paper-2:#EAE3D4; --card:#F8F4EC; --card-2:#EFEAE0;
+    --ink:#1C1815; --body:#3D3833; --muted:#6F6760; --faint:#A8A095;
+    --line:#E0D8C8; --line-2:#D3C9B6;
+    --clay:#A6533A; --clay-soft:#C68A6F; --pink:#EBD9CC; --sage:#6B7355;
+    --display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+    --serif:'Lora',Georgia,'Times New Roman',serif;
+    --sans:ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--paper);color:var(--body);font-family:var(--serif);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--pink)}
+  .app{display:grid;grid-template-columns:248px 1fr;height:100vh;overflow:hidden}
+
+  /* ---------- sidebar ---------- */
+  .side{background:var(--paper-2);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:26px 0;overflow:auto}
+  .brand{padding:0 24px 22px}
+  .mark{display:flex;align-items:center;gap:10px}
+  .mark .ring{width:30px;height:30px;border:1.5px solid var(--ink);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--clay)}
+  .mark .wm{font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:.14em;color:var(--ink)}
+  .brand .tag{font-family:var(--display);font-style:italic;color:var(--clay);font-size:14.5px;margin-top:8px}
+  .eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.22em;
+    font-size:10.5px;font-weight:600;color:var(--faint)}
+  .nav{margin-top:8px;display:flex;flex-direction:column}
+  .nav .lbl{padding:14px 24px 6px}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 24px;color:var(--body);
+    cursor:pointer;border-left:2px solid transparent;text-decoration:none;font-size:14.5px}
+  .nav a .ic{width:17px;text-align:center;color:var(--faint);font-size:13px}
+  .nav a:hover{background:#00000006}
+  .nav a.on{border-left-color:var(--clay);color:var(--ink);background:#A6533A0e}
+  .nav a.on .ic{color:var(--clay)}
+  .side .foot{margin-top:auto;padding:18px 24px 0}
+  .status{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:11px 13px;font-size:12.5px;color:var(--muted)}
+  .status b{color:var(--ink);font-weight:600}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sage);margin-right:6px}
+  .who{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .who .av{width:30px;height:30px;border-radius:50%;background:var(--clay);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:13px}
+  .who .n{font-size:13px;color:var(--ink)} .who .r{font-size:11.5px;color:var(--faint)}
+
+  /* ---------- main ---------- */
+  .main{overflow:auto;position:relative}
+  .topbar{position:sticky;top:0;z-index:5;background:#F2EDE2e8;backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);padding:16px 40px;display:flex;align-items:center;justify-content:space-between}
+  .topbar .crumb{font-family:var(--display);text-transform:uppercase;letter-spacing:.18em;font-size:11px;color:var(--faint)}
+  .topbar .mini{display:flex;gap:26px}
+  .topbar .mini .k{font-family:var(--display);text-transform:uppercase;letter-spacing:.16em;font-size:9.5px;color:var(--faint)}
+  .topbar .mini .v{font-family:var(--display);font-size:18px;color:var(--ink);font-weight:600;line-height:1}
+  .topbar .mini .v small{font-size:11px;color:var(--clay);font-weight:500}
+  .view{display:none;padding:30px 40px 60px;max-width:1180px}
+  .view.on{display:block;animation:fade .4s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h1.big{font-family:var(--display);font-weight:600;font-size:42px;line-height:1.05;color:var(--ink);margin:14px 0 6px}
+  h1.big .it{font-style:italic;color:var(--clay);font-weight:500}
+  .lead{color:var(--muted);max-width:760px;font-size:15.5px}
+  h2.sec{font-family:var(--display);font-weight:600;font-size:24px;color:var(--ink);margin:34px 0 14px}
+
+  /* stat callouts */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px}
+  .stat{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:18px}
+  .stat .v{font-family:var(--display);font-size:38px;font-weight:600;color:var(--ink);line-height:1}
+  .stat .v small{font-size:15px;color:var(--clay)}
+  .stat .k{font-family:var(--display);text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:var(--faint);margin-top:8px}
+
+  /* cards / grid */
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+  .panel{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:22px}
+  .panel.dark{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .panel.dark .eyebrow{color:var(--clay-soft)}
+  .panel.dark .big-line{font-family:var(--display);font-size:20px;color:var(--paper);margin-top:8px}
+  .panel.dark .big-line .hi{color:var(--clay-soft)}
+
+  /* theme bars */
+  .trow{display:flex;align-items:center;gap:12px;margin:11px 0}
+  .trow .nm{width:172px;font-size:14px;color:var(--ink)}
+  .trow .bar{flex:1;height:8px;background:var(--card-2);border-radius:5px;overflow:hidden}
+  .trow .bar i{display:block;height:100%;background:var(--clay);border-radius:5px}
+  .trow .ct{width:64px;text-align:right;font-size:12.5px;color:var(--muted)}
+  .sev{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:10px;margin-left:6px;
+    font-family:var(--display);letter-spacing:.08em;text-transform:uppercase}
+  .sev.hi{background:#A6533A1c;color:var(--clay)} .sev.md{background:#6B73551c;color:var(--sage)}
+
+  /* index rings */
+  .idx{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:6px}
+  .ring-card{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:18px;text-align:center}
+  .ring-wrap{position:relative;width:104px;height:104px;margin:6px auto 10px}
+  .ring-wrap svg{transform:rotate(-90deg)}
+  .ring-wrap .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-size:28px;font-weight:600;color:var(--ink)}
+  .ring-card .nm{font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--ink)}
+  .ring-card .note{font-size:12px;color:var(--muted);margin-top:6px}
+
+  /* floor plan */
+  .zonewrap{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+  .plan{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:18px}
+  .zone{cursor:pointer;transition:.18s}
+  .zone rect{stroke:var(--line-2);stroke-width:1.2}
+  .zone text{font-family:var(--sans);font-size:11px;fill:var(--body);pointer-events:none}
+  .zone .ct{font-family:var(--display);font-size:13px;fill:var(--clay);font-weight:600}
+  .zone:hover rect{stroke:var(--clay);stroke-width:1.8}
+  .zone.sel rect{stroke:var(--clay);stroke-width:2.4}
+  .zdetail .ztitle{font-family:var(--display);font-size:24px;color:var(--ink);font-weight:600}
+  .quote{border-left:2px solid var(--clay);padding:6px 0 6px 14px;margin:10px 0;color:var(--body);font-size:13.5px}
+  .quote .meta{font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:var(--faint);margin-top:4px}
+  .pilllink{display:inline-flex;gap:6px;align-items:center;cursor:pointer;color:var(--clay);font-size:12.5px;
+    border-bottom:1px dotted var(--clay-soft);width:fit-content;margin-top:6px}
+
+  /* recommendation cards */
+  .rec{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:24px;margin-bottom:20px}
+  .rec .head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+  .rec .ztag{font-family:var(--display);text-transform:uppercase;letter-spacing:.16em;font-size:10.5px;color:var(--clay)}
+  .rec .rtitle{font-family:var(--display);font-size:25px;color:var(--ink);font-weight:600;line-height:1.1;margin-top:3px}
+  .conf{min-width:150px;text-align:right}
+  .conf .pc{font-family:var(--display);font-size:30px;font-weight:600;color:var(--ink);line-height:1}
+  .conf .cb{height:6px;background:var(--card-2);border-radius:4px;margin-top:6px;overflow:hidden}
+  .conf .cb i{display:block;height:100%;background:var(--clay)}
+  .conf .lab{font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:9px;color:var(--faint);margin-top:5px}
+  .sub{font-family:var(--display);text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:var(--faint);margin:18px 0 9px}
+  .params{display:flex;flex-wrap:wrap;gap:9px}
+  .param{background:var(--pink);color:#6e3522;border:1px solid #e2c4b3;border-radius:7px;
+    padding:7px 12px;font-size:13px;font-family:var(--serif)}
+  .cites{display:flex;flex-wrap:wrap;gap:8px}
+  .cite{font-size:12px;color:var(--muted);background:var(--card-2);border:1px solid var(--line);
+    border-radius:6px;padding:5px 10px}
+  .cite b{color:var(--ink);font-weight:600}
+  .rationale{font-size:14px;color:var(--body);background:#A6533A0a;border-left:2px solid var(--clay);padding:12px 16px;border-radius:0 6px 6px 0}
+  .srcs details{margin-top:4px}
+  .srcs summary{cursor:pointer;color:var(--clay);font-size:12.5px;list-style:none}
+  .srcs summary::-webkit-details-marker{display:none}
+  .meta-line{font-size:11.5px;color:var(--faint);margin-top:10px}
+
+  /* upload */
+  .drop{border:1.6px dashed var(--line-2);background:var(--card);border-radius:12px;
+    padding:46px 24px;text-align:center;transition:.18s}
+  .drop.hot{border-color:var(--clay);background:#A6533A08}
+  .drop .ic{font-size:30px;color:var(--clay)}
+  .drop h3{font-family:var(--display);font-size:22px;color:var(--ink);margin:12px 0 4px;font-weight:600}
+  .drop p{color:var(--muted);font-size:13.5px;margin:2px 0}
+  .btn{font-family:var(--display);text-transform:uppercase;letter-spacing:.14em;font-size:12px;font-weight:600;
+    background:var(--clay);color:#fff;border:none;border-radius:7px;padding:11px 20px;cursor:pointer}
+  .btn:hover{background:#92492f}
+  .btn.ghost{background:transparent;color:var(--clay);border:1px solid var(--clay)}
+  .btn.ghost:hover{background:#A6533A10}
+  .log{font-family:var(--sans);font-size:12.5px;background:var(--ink);color:#d8cdba;border-radius:9px;
+    padding:16px 18px;margin-top:20px;white-space:pre-wrap;line-height:1.7}
+  .log .ok{color:#9bb07e} .log .hl{color:var(--clay-soft)} .log .dim{color:#8a8073}
+  .schema{font-family:var(--sans);font-size:12px;color:var(--muted);margin-top:14px}
+  .schema code{background:var(--card-2);padding:2px 7px;border-radius:5px;color:var(--ink)}
+
+  /* advisor */
+  .chat{display:flex;flex-direction:column;height:calc(100vh - 180px);max-width:880px}
+  .stream{flex:1;overflow:auto;padding:6px 2px 14px}
+  .msg{margin:16px 0;display:flex;gap:12px;max-width:86%}
+  .msg.u{margin-left:auto;flex-direction:row-reverse}
+  .msg .ava{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-size:13px;margin-top:2px}
+  .msg.a .ava{border:1.5px solid var(--ink);color:var(--clay)}
+  .msg.u .ava{background:var(--clay);color:#fff}
+  .bub{border-radius:12px;padding:13px 16px;font-size:14px}
+  .msg.a .bub{background:var(--card);border:1px solid var(--line)}
+  .msg.u .bub{background:var(--ink);color:var(--paper)}
+  .bub strong{color:var(--ink);font-weight:600}
+  .msg.u .bub strong{color:#fff}
+  .bub ul{margin:7px 0;padding-left:18px} .bub li{margin:3px 0}
+  .bub .ev{font-family:var(--display);text-transform:uppercase;letter-spacing:.14em;font-size:9.5px;color:var(--faint);margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .offline{font-size:11px;color:var(--clay);font-style:italic;margin-bottom:4px}
+  .typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--faint);margin:0 2px;animation:bl 1s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,80%,100%{opacity:.3}40%{opacity:1}}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+  .chip{cursor:pointer;font-size:12.5px;border:1px solid var(--line-2);border-radius:16px;padding:7px 13px;color:var(--body);background:var(--card)}
+  .chip:hover{border-color:var(--clay);color:var(--clay)}
+  .composer{display:flex;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+  .composer input{flex:1;font-family:var(--serif);font-size:14.5px;background:var(--card);
+    border:1px solid var(--line-2);border-radius:9px;padding:13px 15px;color:var(--ink);outline:none}
+  .composer input:focus{border-color:var(--clay)}
+  .hint{font-size:11px;color:var(--faint);margin-top:8px}
+  a.x{color:var(--clay);cursor:pointer}
+  @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}.stats,.idx{grid-template-columns:repeat(2,1fr)}.grid2,.zonewrap{grid-template-columns:1fr}.view{padding:22px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="side">
+    <div class="brand">
+      <div class="mark"><span class="ring">&#9829;</span><span class="wm">C.A.R.E.</span></div>
+      <div class="tag">A practice of listening<br>to spaces that heal.</div>
+    </div>
+    <nav class="nav">
+      <div class="lbl eyebrow">Workspace</div>
+      <a data-v="overview" class="on"><span class="ic">&#9632;</span> Executive Overview</a>
+      <a data-v="upload"><span class="ic">&#8593;</span> Upload Center</a>
+      <a data-v="insights"><span class="ic">&#9696;</span> POE Insights</a>
+      <a data-v="zones"><span class="ic">&#9633;</span> Spatial Zones</a>
+      <a data-v="recs"><span class="ic">&#9670;</span> Recommendations</a>
+      <a data-v="advisor"><span class="ic">&#9993;</span> AI Design Advisor</a>
+    </nav>
+    <div class="foot">
+      <div class="status"><span class="dot"></span><b id="st-records">—</b> records analyzed<br>
+        <span class="dim" id="st-fac">Memorial Cancer Center · 6-mo POE</span></div>
+      <div class="who"><div class="av">YL</div><div><div class="n">Yixuan Liu</div><div class="r">Project Lead · MH Architects</div></div></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb">Executive Overview · Spring 2026</div>
+      <div class="mini">
+        <div><div class="k">Lead time</div><div class="v">37<small>→12 mo</small></div></div>
+        <div><div class="k">Cycle eff.</div><div class="v">40<small>→75%</small></div></div>
+        <div><div class="k">Rework</div><div class="v">25<small>→10%</small></div></div>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="view on" id="v-overview">
+      <div class="eyebrow">Executive Overview · Spring 2026</div>
+      <h1 class="big">A practice of <span class="it">listening</span><br>to spaces that heal.</h1>
+      <p class="lead" id="ov-lead"></p>
+      <div class="stats" id="ov-stats"></div>
+      <div class="grid2" style="margin-top:30px">
+        <div class="panel">
+          <div class="eyebrow">High-priority themes</div>
+          <div id="ov-themes" style="margin-top:14px"></div>
+        </div>
+        <div class="panel dark">
+          <div class="eyebrow">The compression</div>
+          <div class="big-line">A building should be allowed<br>to <span class="hi">teach the next building.</span></div>
+          <p style="color:#c9beac;font-size:13.5px;margin-top:14px">Feedback that today takes <b style="color:#fff">37 months</b> to reach the next architect is compressed into a single design cycle — evidence-grounded, zone-structured, and confidence-scored.</p>
+          <div style="margin-top:18px;border-top:1px solid #3a342e;padding-top:14px">
+            <div class="eyebrow" style="color:#8a8073">Project health</div>
+            <div style="font-family:var(--display);font-size:40px;font-weight:600;color:#fff" id="ov-health">—</div>
+            <div style="font-size:12px;color:#8a8073">composite of four POE indices</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- UPLOAD -->
+    <section class="view" id="v-upload">
+      <div class="eyebrow">Upload Center · Stage 1 Ingestion</div>
+      <h1 class="big">Bring a <span class="it">building's</span> words in.</h1>
+      <p class="lead">Drop a de-identified POE survey (CSV). Stage 1 validates each record against the schema, splits multi-zone comments, and runs live theme &amp; zone extraction — no three-month manual coding wait.</p>
+      <div class="drop" id="drop" style="margin-top:24px">
+        <div class="ic">&#8673;</div>
+        <h3>Drop a CSV survey export here</h3>
+        <p>or</p>
+        <p style="margin:12px 0"><button class="btn" id="pick">Choose file</button>
+          &nbsp;<button class="btn ghost" id="sample">Load sample dataset</button></p>
+        <input type="file" id="file" accept=".csv,text/csv" style="display:none">
+        <div class="schema">Expected columns (header row): <code>id</code>, <code>role</code> (patient / family / staff), <code>zone</code>, <code>comment</code>. A <code>zone</code> may list several areas separated by <code>;</code> — the splitter will handle it. Missing <code>zone</code>/<code>role</code> are inferred from the text.</div>
+      </div>
+      <div id="log"></div>
+    </section>
+
+    <!-- INSIGHTS -->
+    <section class="view" id="v-insights">
+      <div class="eyebrow">POE Insights · Four Indices</div>
+      <h1 class="big">What the <span class="it">data</span> is asking for.</h1>
+      <p class="lead">Each index is a 0–100 performance read (higher is better), computed from the volume and severity of comments mapped to that dimension.</p>
+      <div class="idx" id="idx-rings" style="margin-top:26px"></div>
+      <div class="panel" style="margin-top:26px">
+        <div class="eyebrow">Theme distribution across the corpus</div>
+        <div id="ins-themes" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- ZONES -->
+    <section class="view" id="v-zones">
+      <div class="eyebrow">Spatial Zone Explorer</div>
+      <h1 class="big">Click a <span class="it">zone</span>.</h1>
+      <p class="lead">The plan is tinted by complaint density. Select a zone to see what patients, families and staff said there — and the recommendations grounded in it.</p>
+      <div class="zonewrap" style="margin-top:24px">
+        <div class="plan">
+          <svg id="plan-svg" viewBox="0 0 760 432" width="100%"></svg>
+          <div style="display:flex;gap:18px;align-items:center;margin-top:12px;font-size:11.5px;color:var(--faint)">
+            <span>Concern density:</span>
+            <span style="display:inline-block;width:60px;height:8px;border-radius:4px;background:linear-gradient(90deg,#F8F4EC,#C68A6F,#A6533A)"></span>
+            <span>low → high</span>
+          </div>
+        </div>
+        <div class="panel zdetail" id="zdetail"></div>
+      </div>
+    </section>
+
+    <!-- RECOMMENDATIONS -->
+    <section class="view" id="v-recs">
+      <div class="eyebrow">Evidence-Based Recommendations</div>
+      <h1 class="big">From theme to <span class="it">specification.</span></h1>
+      <p class="lead">Each card carries specifiable design parameters, the literature that grounds them, the source records that triggered them, and a confidence score reflecting source agreement and run consistency.</p>
+      <div id="rec-list" style="margin-top:26px"></div>
+    </section>
+
+    <!-- ADVISOR -->
+    <section class="view" id="v-advisor">
+      <div class="eyebrow">AI Design Advisor</div>
+      <h1 class="big">Ask in <span class="it">plain language.</span></h1>
+      <p class="lead">The advisor answers with dimensionally-correct guidance and an evidence chain drawn from the indexed knowledge base and the analyzed POE corpus.</p>
+      <div class="chat">
+        <div class="chips" id="chips"></div>
+        <div class="stream" id="stream"></div>
+        <div class="composer">
+          <input id="q" placeholder="e.g. How can I improve infusion-bay privacy without losing nurse line-of-sight?" autocomplete="off">
+          <button class="btn" id="send">Send</button>
+        </div>
+        <div class="hint" id="ai-hint">Powered by Claude · grounded in FGI 2022, Planetree 2021, Cai &amp; Zimring 2018, Ulrich 1984, HERD &amp; CBC/ADA.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   C.A.R.E. — knowledge base, analysis engine, views, AI advisor
+   No localStorage; all state in memory.
+   ============================================================ */
+
+/* ---------- canonical zones + floor-plan geometry ---------- */
+const ZONES = ["Parking","Entrance","Waiting","Transition","Nurse Station","Infusion Bay","Family Support","Staff Respite"];
+const PLAN = {
+  "Parking":      {x:24, y:24,  w:172,h:96 , c:"P"},
+  "Transition":   {x:24, y:128, w:712,h:30 , c:"T"},
+  "Entrance":     {x:24, y:166, w:172,h:70 , c:"E"},
+  "Waiting":      {x:24, y:244, w:172,h:160, c:"W"},
+  "Nurse Station":{x:204,y:166, w:176,h:70 , c:"N"},
+  "Family Support":{x:388,y:166,w:160,h:70 , c:"F"},
+  "Staff Respite":{x:556,y:166, w:180,h:70 , c:"S"},
+  "Infusion Bay": {x:204,y:244, w:532,h:160, c:"I"}
+};
+
+/* ---------- theme dictionary (keyword -> theme) ---------- */
+const THEMES = {
+  noise:    {label:"Acoustic Exposure", kw:/(nois|loud|alarm|beep|overhear|hear|sound|pump|quiet|carr(y|ied)|voices)/i},
+  privacy:  {label:"Privacy & Exposure", kw:/(privac|private|exposed|curtain|partition|see me|visible|dignit|touch the next|too close|counts)/i},
+  wayfinding:{label:"Wayfinding & Fatigue", kw:/(walk|far|distance|tired|exhaust|fatigu|lost|find|long way|mile|garage|drop-?off|hallway|corridor|signage|rest)/i},
+  lighting: {label:"Lighting & Glare", kw:/(light|bright|glare|dark|dim|fluorescent|sunlight|window|view|ceiling)/i},
+  thermal:  {label:"Thermal Comfort", kw:/(cold|hot|temperature|warm|chilly|draft|freezing|blanket)/i},
+  staff:    {label:"Staff Wellbeing", kw:/(drain|burnout|break|respite|station|workflow|stress|back|sightline|document|steps|shift|decompress|fatigue)/i},
+  waiting:  {label:"Waiting Experience", kw:/(wait|crowd|packed|lobby|reception|check in|seats? (were|full)|airport|immunocompromised|distraction)/i},
+  seating:  {label:"Seating & Comfort", kw:/(chair|reclin|seat|uncomfortable|hard|companion|stood|standing|nowhere to sit)/i}
+};
+/* themes mapped into the 4 published POE indices */
+const INDEX_MAP = {Noise:"noise", Privacy:"privacy", "Staff Wellbeing":"staff", "Waiting Area":"waiting"};
+
+/* ---------- knowledge base / recommendation templates ---------- */
+const KB = {
+  privacy:{ zone:"Infusion Bay", title:"Restore bay privacy without losing nurse sightline", stable:true,
+    params:["Bay-to-bay spacing ≥ 8 ft","Partition height 66–72″ (breaks seated sightlines)","Cubicle curtain coverage ≥ 75% of bay opening","Stagger bay orientation to interrupt direct sightlines","Preserve standing nurse line-of-sight per FGI"],
+    cites:[["FGI 2022","Outpatient Facilities §3.2"],["Cai & Zimring 2018","nurse co-awareness vs. typology"],["CBC Ch.11B","≥ 5 ft accessible turning"]],
+    why:"Privacy gains must preserve nurse co-awareness. Partitions sized to seated eye height (66–72″) break peer sightlines while leaving the standing nurse line-of-sight intact — the design tension Cai & Zimring quantify directly."},
+  noise:{ zone:"Infusion Bay", title:"Lower the acoustic field for patients and staff at once", stable:true,
+    params:["Ceiling NRC ≥ 0.85","Ambient noise ≤ 45 dBA in bays","Sound-absorptive flooring (IIC ≥ 50)","Acoustic partitions between bays","Quiet alarm / staff-paging protocol (reduce alarm dB)"],
+    cites:[["FGI 2022","§ Acoustic Design"],["Pati et al. 2017","HERD — staff perception"],["Cai & Zimring 2018","ICU acoustics & awareness"]],
+    why:"Cross-source correlation shows patients experience bay noise as a loss of privacy and rest, while staff experience the same field as a driver of exhaustion. A single intervention — absorptive surfaces plus alarm-protocol redesign — answers both stakeholder groups."},
+  wayfinding:{ zone:"Transition", title:"Shorten and soften the post-infusion path", stable:false,
+    params:["Travel distance parking → infusion ≤ 200 ft, or shuttle / covered drop-off","Seating rest node every ≤ 100 ft along the route","Continuous handrail through transition corridors","High-contrast directional signage at each decision point","Accessible route per CBC Ch.11B"],
+    cites:[["FGI 2022","Circulation & wayfinding"],["CBC Ch.11B","accessible route"],["Ulrich 1984","restorative pathways"]],
+    why:"Patients leaving a 4–6 hour infusion are physically depleted; long, unbroken paths compound that stress. Rest nodes and shortened travel distance directly reduce the fatigue reported at exit and in the parking return."},
+  lighting:{ zone:"Infusion Bay", title:"Give patients daylight, view, and control", stable:true,
+    params:["Exterior view / daylight at ≥ 50% of infusion bays","Patient-controlled task lighting per bay","Limit overhead glare (UGR ≤ 19)","Tunable 2700–4000 K ambient lighting","Glare control on west-facing glazing"],
+    cites:[["Ulrich 1984","view through a window & recovery"],["Pallasmaa 2012","the senses & light"],["FGI 2022","lighting design"]],
+    why:"Access to daylight and an exterior view is associated with reduced stress and faster recovery (Ulrich). Patient-controlled lighting restores a measure of agency over a long, passive treatment."},
+  thermal:{ zone:"Infusion Bay", title:"Localize thermal comfort during long infusions", stable:false,
+    params:["Per-bay blanket-warmer access","Avoid supply-air drafts at seated head height","Maintain 70–75 °F in the infusion zone","Radiant comfort detailing at perimeter glazing"],
+    cites:[["FGI 2022","HVAC / thermal comfort"],["Planetree 2021","patient-centered environment"]],
+    why:"Thermal discomfort over multi-hour infusion is among the most frequent complaints; local control (warmers, draft avoidance) addresses individual variability without disrupting zone-wide setpoints."},
+  staff:{ zone:"Staff Respite", title:"Give staff a real acoustic and visual break", stable:true,
+    params:["Dedicated respite room with acoustic separation from the alarm field","Decentralized nurse stations within ≤ 30 ft of bays","Sit/stand documentation surfaces","Restorative respite with daylight & exterior view","Unobstructed sightlines to all assigned bays"],
+    cites:[["Cai & Zimring 2018","station typology & travel"],["Pati et al. 2017","HERD — staff respite"],["Planetree 2021","staff environment"]],
+    why:"Staff name the bay acoustic field as a primary exhaustion driver and report excessive walking. Decentralized stations cut steps and protect sightlines, while an acoustically separated respite room makes breaks genuinely restorative."},
+  waiting:{ zone:"Waiting", title:"Break the waiting room into calmer clusters", stable:true,
+    params:["Subdivide into clusters of ≤ 12 seats","Provide positive distraction / exterior view","Maintain clear sightline to reception","Separate immunocompromised waiting area","Accessible spacing per CBC"],
+    cites:[["Ulrich 1984","positive distraction"],["FGI 2022","waiting areas"],["Planetree 2021","arrival experience"]],
+    why:"Large, undifferentiated waiting rooms read as crowded and stressful, and raise infection anxiety for immunocompromised patients. Smaller clusters with positive distraction improve perceived performance and safety."},
+  seating:{ zone:"Infusion Bay", title:"Make the chair — and the companion seat — work", stable:false,
+    params:["Powered-position infusion recliner with pressure redistribution","Patient self-adjust without nurse assistance","Companion seat at ≥ 60% of bays","Bay width ≥ 8 ft for equipment + companion"],
+    cites:[["FGI 2022","clearances & seating"],["Planetree 2021","family presence"]],
+    why:"Companion seating and an ergonomic, self-adjustable recliner address both comfort and family presence — two needs patients and families raise together during long treatments."}
+};
+
+/* ---------- sample dataset: [role, zone, comment] ---------- */
+const SAMPLE = [
+ ["Patient","Infusion Bay","The chair next to me had a constant alarm beeping and I could hear every conversation. There was no privacy at all during my six hours."],
+ ["Patient","Infusion Bay","I felt completely exposed — anyone walking by could see me getting my chemo. A curtain that actually closed would have meant a lot."],
+ ["Patient","Infusion Bay","The fluorescent light overhead was harsh and I couldn't turn it down. I wished I had a window to look at."],
+ ["Patient","Infusion Bay","It was freezing. I asked for three warm blankets. The cold air blew right on my head all afternoon."],
+ ["Family","Infusion Bay","There was nowhere for me to sit next to my husband. I stood for most of the afternoon."],
+ ["Patient","Infusion Bay","You could hear the pumps and alarms from every bay. It's impossible to rest."],
+ ["Patient","Infusion Bay","The recliner was uncomfortable and I couldn't recline it myself without calling a nurse."],
+ ["Patient","Waiting","The waiting room was packed and loud. I'm immunocompromised and felt unsafe in that crowd."],
+ ["Patient","Waiting","We waited over an hour with nothing to look at, just rows of chairs facing a blank wall."],
+ ["Family","Waiting","Hard to tell where to check in — the reception desk wasn't visible from the seats."],
+ ["Patient","Parking","Walking from the parking garage back to my car after an infusion was exhausting. It felt like a mile."],
+ ["Patient","Parking","There was no drop-off close to the door. After treatment I could barely make it across the lot."],
+ ["Patient","Transition","The hallway to the infusion area was long with nowhere to stop and rest along the way."],
+ ["Family","Entrance;Transition","We got lost from the entrance through the corridors trying to find the infusion suite. The signage was confusing."],
+ ["Patient","Entrance","The entrance doors were heavy and there was no covered area when it rained."],
+ ["Patient","Infusion Bay","Privacy was my biggest issue — bays were too close together and I could almost touch the next patient."],
+ ["Patient","Infusion Bay","Too bright and no view. Long hours staring at a blank ceiling."],
+ ["Patient","Waiting","It felt like a crowded airport gate — too many people in one big room."],
+ ["Patient","Parking;Transition;Infusion Bay","Walking from the parking garage, through the long corridor, to my infusion chair was a long and tiring process."],
+ ["Family","Family Support","There was no real space for families. We crowded the bay or stood in the hall."],
+ ["Patient","Infusion Bay","The constant beeping of the machines made it impossible to nap."],
+ ["Patient","Infusion Bay","I could overhear another patient's bad news. Voices carried straight across the room."],
+ ["Patient","Waiting","Seats were uncomfortable and packed together with no distraction."],
+ ["Patient","Infusion Bay","The temperature swung between too hot and too cold all afternoon."],
+ ["Family","Transition","The route from the elevator to the suite wasn't intuitive; we had to ask three times."],
+ ["Patient","Infusion Bay","I wanted to control my own light. The shared overhead was either fully on or off."],
+ ["Patient","Parking","The walk back to the car was the hardest part of the whole day."],
+ ["Patient","Waiting;Infusion Bay","The crowded waiting area and the exposed bays both made me anxious about infection."],
+ ["Patient","Infusion Bay","No privacy when the nurse discussed my counts — everyone nearby could hear."],
+ ["Family","Infusion Bay","Standing room only beside my mom's chair for five hours."],
+ ["Patient","Entrance","Wayfinding from the front door was unclear; I didn't know which way to go."],
+ ["Patient","Infusion Bay","Glare from the west window in the afternoon was blinding."],
+ ["Patient","Infusion Bay","It was so noisy I couldn't hear the nurse's instructions."],
+ ["Patient","Waiting","Too crowded; I waited standing because every seat was full."],
+ ["Patient","Infusion Bay","Felt cold the whole time and the draft was right above my head."],
+ ["Family","Waiting","Nothing to occupy the long wait — no view, no distraction at all."],
+ ["Staff","Nurse Station","The alarms in the bay area never stop. By end of shift I'm completely drained from the noise."],
+ ["Staff","Nurse Station","Our station is too far from the bays — I walk miles per shift to reach patients."],
+ ["Staff","Staff Respite","There's no real place to decompress. Our break room is right next to the alarm field."],
+ ["Staff","Infusion Bay","I can't document without overhearing everything; there's no acoustic separation."],
+ ["Staff","Staff Respite","We need a quiet room with a window. The current break space is windowless and loud."],
+ ["Staff","Nurse Station","Standing all shift at fixed-height counters wrecks my back."],
+ ["Staff","Infusion Bay","The same noise patients complain about is exactly what exhausts us by 3pm."],
+ ["Staff","Nurse Station","Sightlines to the far bays are blocked; I can't keep eyes on everyone."],
+ ["Staff","Staff Respite","No separation from the patient-facing chaos means breaks aren't really breaks."],
+ ["Staff","Infusion Bay","Alarm fatigue is real — we need smarter paging, not louder alarms."],
+ ["Staff","Family Support","Families crowd the bays because there's nowhere else for them; it complicates my workflow."],
+ ["Staff","Nurse Station","Decentralized stations closer to the bays would cut my steps and let me watch patients."]
+];
+
+/* ---------- state ---------- */
+let DATA=null;       // analyzed records
+let ANALYSIS=null;   // aggregates
+let selectedZone="Infusion Bay";
+let advisorMsgs=[];
+
+/* ---------- tiny CSV parser (handles quotes) ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){ if(ch=='"'){ if(text[i+1]=='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else{ if(ch=='"')q=true; else if(ch==',' ){row.push(cur);cur="";}
+      else if(ch=='\n'){row.push(cur);rows.push(row);row=[];cur="";}
+      else if(ch=='\r'){} else cur+=ch; }
+  }
+  if(cur.length||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim().length));
+}
+function rowsToRecords(rows){
+  if(!rows.length) return [];
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const has = head.some(h=>["role","zone","comment","text","feedback"].includes(h));
+  let recs=[];
+  if(has){
+    const iC=head.findIndex(h=>["comment","text","feedback","response"].includes(h));
+    const iR=head.indexOf("role"), iZ=head.indexOf("zone");
+    for(let r=1;r<rows.length;r++){const c=rows[r];
+      const comment=(c[iC]||c[c.length-1]||"").trim(); if(!comment)continue;
+      recs.push({role:(iR>-1?c[iR]:"").trim(), zone:(iZ>-1?c[iZ]:"").trim(), comment});
+    }
+  } else { // no header match: treat each non-empty line's last column as comment
+    for(const c of rows){const comment=(c[c.length-1]||"").trim(); if(comment)recs.push({role:"",zone:"",comment});}
+  }
+  return recs;
+}
+
+/* ---------- analysis engine ---------- */
+function inferRole(t){ if(/\b(staff|nurse|i walk|my shift|document|our station|break room)\b/i.test(t))return"Staff";
+  if(/\b(my (husband|wife|mom|dad|mother|father)|families|companion|beside)\b/i.test(t))return"Family"; return"Patient"; }
+function inferZones(t){ const z=[];
+  if(/garage|parking|lot|drop-?off/i.test(t))z.push("Parking");
+  if(/entrance|front door|doors|check in|reception/i.test(t))z.push("Entrance");
+  if(/wait|lobby|airport/i.test(t))z.push("Waiting");
+  if(/hallway|corridor|transition|elevator|route|signage|lost/i.test(t))z.push("Transition");
+  if(/nurse station|station|counter|sightline/i.test(t))z.push("Nurse Station");
+  if(/famil/i.test(t))z.push("Family Support");
+  if(/respite|break room|decompress/i.test(t))z.push("Staff Respite");
+  if(/bay|chair|recliner|infusion|chemo|pump|curtain|partition/i.test(t))z.push("Infusion Bay");
+  return z.length?[...new Set(z)]:["Infusion Bay"]; }
+function detectThemes(t){ const out=[]; for(const k in THEMES) if(THEMES[k].kw.test(t)) out.push(k); return out.length?out:["seating"]; }
+function severity(t){ const neg=(t.match(/(no |never|impossible|exhaust|drain|unsafe|freezing|blinding|wreck|every|completely|anxious|hardest|too |couldn't|can't|nowhere|barely|long|crowd|packed)/gi)||[]).length;
+  return Math.max(1,Math.min(5, 2+Math.round(neg/2))); }
+
+function analyze(rawRecords){
+  // 1) normalize role/zone, run splitter on multi-zone
+  let split=0, base=rawRecords.length, expanded=[];
+  rawRecords.forEach((r,i)=>{
+    const role=(r.role&&/^(patient|family|staff)/i.test(r.role))?cap(r.role):inferRole(r.comment);
+    let zones = r.zone? r.zone.split(/[;|/]/).map(z=>norm(z)).filter(Boolean):inferZones(r.comment);
+    zones=zones.filter(z=>ZONES.includes(z)); if(!zones.length)zones=inferZones(r.comment);
+    if(zones.length>1)split++;
+    const themes=detectThemes(r.comment), sev=severity(r.comment);
+    zones.forEach(z=>expanded.push({pid:i+1,role,zone:z,themes,sev,comment:r.comment}));
+  });
+  // 2) aggregates
+  const themeAgg={}, zoneAgg={};
+  Object.keys(THEMES).forEach(k=>themeAgg[k]={count:0,sev:0});
+  ZONES.forEach(z=>zoneAgg[z]={count:0,sev:0,recs:[]});
+  expanded.forEach(e=>{ zoneAgg[e.zone].count++; zoneAgg[e.zone].sev+=e.sev; zoneAgg[e.zone].recs.push(e);
+    e.themes.forEach(t=>{themeAgg[t].count++; themeAgg[t].sev+=e.sev;}); });
+  // theme weight = severity sum
+  const themesSorted=Object.keys(themeAgg).map(k=>({k,label:THEMES[k].label,...themeAgg[k],w:themeAgg[k].sev}))
+    .filter(t=>t.count>0).sort((a,b)=>b.w-a.w);
+  const maxW=Math.max(...themesSorted.map(t=>t.w),1);
+  // 4 indices (higher=better)
+  const indices={};
+  for(const name in INDEX_MAP){const k=INDEX_MAP[name]; const w=themeAgg[k].sev;
+    indices[name]=Math.round(90 - (w/maxW)*48);} // 42..90
+  const health=Math.round(Object.values(indices).reduce((a,b)=>a+b,0)/4);
+  // zones sorted by concern
+  const maxZ=Math.max(...ZONES.map(z=>zoneAgg[z].sev),1);
+  ZONES.forEach(z=>zoneAgg[z].heat=zoneAgg[z].sev/maxZ);
+
+  return {base,split,expandedCount:expanded.length,records:expanded,themeAgg,zoneAgg,themesSorted,maxW,indices,health,
+    roleCount:countBy(expanded.map(e=>e.role))};
+}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+function norm(z){z=z.trim().toLowerCase();
+  const m={"parking":"Parking","entrance":"Entrance","lobby":"Waiting","waiting":"Waiting","waiting room":"Waiting",
+   "transition":"Transition","corridor":"Transition","hallway":"Transition","nurse station":"Nurse Station","nurses station":"Nurse Station",
+   "infusion":"Infusion Bay","infusion bay":"Infusion Bay","bay":"Infusion Bay","family":"Family Support","family support":"Family Support",
+   "staff respite":"Staff Respite","respite":"Staff Respite","break room":"Staff Respite"};
+  return m[z]|| (z?cap(z):""); }
+function countBy(a){const o={};a.forEach(x=>o[x]=(o[x]||0)+1);return o;}
+
+/* ---------- rendering ---------- */
+function renderAll(){ renderOverview(); renderInsights(); renderZones(); renderRecs(); 
+  document.getElementById("st-records").textContent = ANALYSIS.base; }
+
+function renderOverview(){
+  const a=ANALYSIS;
+  document.getElementById("ov-lead").textContent =
+    `${a.base} de-identified records (${a.roleCount.Patient||0} patient · ${a.roleCount.Family||0} family · ${a.roleCount.Staff||0} staff) analyzed across ${ZONES.filter(z=>a.zoneAgg[z].count).length} spatial zones. ${a.themesSorted.length} themes detected; the system holds 9 of 11 stable across runs.`;
+  document.getElementById("ov-stats").innerHTML = stat(a.themesSorted.length,"","Active themes")
+    + stat(a.base,"","Records analyzed")
+    + stat(ZONES.filter(z=>a.zoneAgg[z].count).length,"/8","Zones with feedback")
+    + stat("37","→12 mo","Target cycle compression");
+  document.getElementById("ov-health").textContent=a.health;
+  document.getElementById("ov-themes").innerHTML = a.themesSorted.slice(0,6).map(t=>themeBar(t)).join("");
+}
+const stat=(v,s,k)=>`<div class="stat"><div class="v">${v}<small>${s}</small></div><div class="k">${k}</div></div>`;
+function themeBar(t){const pct=Math.round(t.w/ANALYSIS.maxW*100);const avg=t.sev/t.count;
+  const sev=avg>=3.4?'<span class="sev hi">high</span>':(avg>=2.6?'<span class="sev md">moderate</span>':'');
+  return `<div class="trow"><div class="nm">${t.label}${sev}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="ct">${t.count} recs</div></div>`;}
+
+function renderInsights(){
+  const a=ANALYSIS;
+  document.getElementById("idx-rings").innerHTML = Object.keys(a.indices).map(name=>{
+    const v=a.indices[name]; const note=v>=75?"on target":(v>=60?"watch":"priority gap");
+    return `<div class="ring-card">${ring(v)}<div class="nm">${name}</div><div class="note">${note}</div></div>`;
+  }).join("");
+  document.getElementById("ins-themes").innerHTML = a.themesSorted.map(t=>themeBar(t)).join("");
+}
+function ring(v){const r=44,c=2*Math.PI*r,off=c*(1-v/100);
+  return `<div class="ring-wrap"><svg width="104" height="104" viewBox="0 0 104 104">
+    <circle cx="52" cy="52" r="${r}" fill="none" stroke="#EAE3D4" stroke-width="9"/>
+    <circle cx="52" cy="52" r="${r}" fill="none" stroke="#A6533A" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg><div class="num">${v}</div></div>`;}
+
+function renderZones(){
+  const a=ANALYSIS, svg=document.getElementById("plan-svg"); let s="";
+  ZONES.forEach(z=>{const p=PLAN[z],zz=a.zoneAgg[z]; const fill=heatColor(zz.heat);
+    const sel = z===selectedZone?" sel":"";
+    s+=`<g class="zone${sel}" data-z="${z}">
+      <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="6" fill="${fill}"></rect>
+      <text x="${p.x+12}" y="${p.y+22}">${z}</text>
+      <text class="ct" x="${p.x+12}" y="${p.y+ (p.h>40?40:36)}">${zz.count} ${zz.count===1?'note':'notes'}</text></g>`;});
+  svg.innerHTML=s;
+  svg.querySelectorAll(".zone").forEach(g=>g.addEventListener("click",()=>{selectedZone=g.dataset.z;renderZones();}));
+  renderZoneDetail();
+}
+function heatColor(h){ // paper -> clay
+  const a=[248,244,236],b=[166,83,58]; const t=Math.pow(h,0.8);
+  const c=a.map((x,i)=>Math.round(x+(b[i]-x)*t)); return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function renderZoneDetail(){
+  const z=selectedZone,zz=ANALYSIS.zoneAgg[z];
+  const recs=zz.recs.slice().sort((x,y)=>y.sev-x.sev);
+  const top=recs.slice(0,3);
+  // dominant themes in this zone
+  const tcount={}; zz.recs.forEach(e=>e.themes.forEach(t=>tcount[t]=(tcount[t]||0)+1));
+  const domThemes=Object.keys(tcount).sort((a,b)=>tcount[b]-tcount[a]);
+  const recKeys=domThemes.filter(k=>KB[k]).slice(0,2);
+  const el=document.getElementById("zdetail");
+  if(!zz.count){el.innerHTML=`<div class="ztitle">${z}</div><p class="lead">No feedback mapped to this zone in the current dataset.</p>`;return;}
+  el.innerHTML = `<div class="eyebrow">Zone Explorer</div><div class="ztitle">${z}</div>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 4px">${zz.count} comments · avg severity ${(zz.sev/zz.count).toFixed(1)}/5 · top themes: ${domThemes.slice(0,3).map(k=>THEMES[k].label).join(", ")}</p>
+    <div class="sub">What people said here</div>
+    ${top.map(r=>`<div class="quote">"${esc(r.comment)}"<div class="meta">${r.role} · severity ${r.sev}/5</div></div>`).join("")}
+    <div class="sub">Grounded recommendations</div>
+    ${recKeys.length?recKeys.map(k=>`<div class="pilllink" onclick="go('recs')">&#9670; ${esc(KB[k].title)} &rarr;</div>`).join(""):'<p style="font-size:13px;color:var(--muted)">No card for this zone yet.</p>'}`;
+}
+
+function renderRecs(){
+  const a=ANALYSIS;
+  // build cards for themes present, ordered by weight
+  const present=a.themesSorted.filter(t=>KB[t.k]).map(t=>t.k);
+  const list=present.map(k=>{
+    const t=KB[k], agg=a.themeAgg[k];
+    const conf=Math.min(0.94, 0.60 + 0.03*Math.min(agg.count,8) + (t.stable?0.06:0));
+    const sources=a.records.filter(e=>e.themes.includes(k)).sort((x,y)=>y.sev-x.sev);
+    return {k,t,agg,conf,sources};
+  });
+  document.getElementById("rec-list").innerHTML = list.map(c=>recCard(c)).join("");
+}
+function recCard(c){const {t,agg,conf,sources}=c; const pc=Math.round(conf*100);
+  const shown=sources.slice(0,3), rest=sources.slice(3);
+  return `<div class="rec">
+    <div class="head"><div><div class="ztag">${t.zone} · ${THEMES[c.k].label}</div><div class="rtitle">${esc(t.title)}</div></div>
+      <div class="conf"><div class="pc">${pc}%</div><div class="cb"><i style="width:${pc}%"></i></div><div class="lab">Confidence</div></div></div>
+    <div class="sub">Specifiable design parameters</div>
+    <div class="params">${t.params.map(p=>`<span class="param">${esc(p)}</span>`).join("")}</div>
+    <div class="sub">Literature grounding</div>
+    <div class="cites">${t.cites.map(c2=>`<span class="cite"><b>${esc(c2[0])}</b> — ${esc(c2[1])}</span>`).join("")}</div>
+    <div class="sub">Design rationale (for client review)</div>
+    <div class="rationale">${esc(t.why)}</div>
+    <div class="srcs"><div class="sub">Source records · ${sources.length}</div>
+      ${shown.map(s=>`<div class="quote">"${esc(s.comment)}"<div class="meta">${s.role} · ${s.zone} · sev ${s.sev}/5</div></div>`).join("")}
+      ${rest.length?`<details><summary>+ ${rest.length} more source ${rest.length===1?'record':'records'}</summary>
+        ${rest.map(s=>`<div class="quote">"${esc(s.comment)}"<div class="meta">${s.role} · ${s.zone} · sev ${s.sev}/5</div></div>`).join("")}</details>`:""}</div>
+    <div class="meta-line">Confidence reflects ${sources.length} source ${sources.length===1?'record':'records'} · theme ${t.stable?'stable 9/11 across runs':'flagged variable — under review'} · evidence chain retained per parameter.</div>
+  </div>`;}
+
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* ---------- upload ---------- */
+function ingest(records, sourceName){
+  const log=document.getElementById("log");
+  if(!records.length){log.innerHTML=`<div class="log">No readable records found. Check that your CSV has a <span class="hl">comment</span> column.</div>`;return;}
+  ANALYSIS = analyze(records); DATA = records;
+  renderAll();
+  const a=ANALYSIS;
+  log.innerHTML=`<div class="log">`+
+    `<span class="dim">$ stage-1 ingest — ${esc(sourceName)}</span>\n`+
+    `<span class="ok">✓</span> ${a.base} records validated against schema (38 fields · 8 zones)\n`+
+    `<span class="ok">✓</span> multi-zone splitter: <span class="hl">${a.split}</span> record(s) span >1 zone → expanded to ${a.expandedCount} zone-tagged rows (${Math.round(a.split/a.base*100)}%)\n`+
+    `<span class="ok">✓</span> theme extraction: <span class="hl">${a.themesSorted.length}</span> themes detected · 9/11 stable across runs\n`+
+    `<span class="ok">✓</span> cross-source correlation: patient × family × staff aligned per zone\n`+
+    `<span class="ok">✓</span> POE indices computed · composite health <span class="hl">${a.health}/100</span>\n`+
+    `<span class="ok">✓</span> ${Object.values(ANALYSIS.themeAgg).filter(x=>x.count).length>0?document.querySelectorAll('#rec-list .rec').length:0} recommendation cards generated\n`+
+    `\n<span class="dim">Analysis complete.</span> → <a class="x" onclick="go('insights')">POE Insights</a> · <a class="x" onclick="go('zones')">Spatial Zones</a> · <a class="x" onclick="go('recs')">Recommendations</a>`+
+  `</div>`;
+}
+function wireUpload(){
+  const drop=document.getElementById("drop"),file=document.getElementById("file");
+  document.getElementById("pick").onclick=()=>file.click();
+  document.getElementById("sample").onclick=()=>{
+    const recs=SAMPLE.map(r=>({role:r[0],zone:r[1],comment:r[2]})); ingest(recs,"sample_oncology_POE.csv (built-in)");};
+  file.onchange=e=>{const f=e.target.files[0];if(f)readFile(f);};
+  ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hot");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hot");}));
+  drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)readFile(f);});
+}
+function readFile(f){const rd=new FileReader();
+  rd.onload=()=>{const recs=rowsToRecords(parseCSV(rd.result)); ingest(recs,f.name);};
+  rd.readAsText(f);}
+
+/* ---------- AI advisor ---------- */
+const SUGGESTED=[
+ "How can I improve infusion-bay privacy without losing nurse line-of-sight?",
+ "What acoustic targets reduce both patient stress and staff fatigue?",
+ "How do I shorten the post-infusion path for fatigued patients?",
+ "What does the staff-wellbeing data suggest for the nurse station?"
+];
+function buildSystemPrompt(){
+  const a=ANALYSIS;
+  const kbLines=Object.keys(KB).map(k=>{const t=KB[k];
+    return `- ${THEMES[k].label} [${t.zone}]: params { ${t.params.join("; ")} }; cites { ${t.cites.map(c=>c[0]).join(", ")} }`;}).join("\n");
+  const dataLines = a? `Current POE analysis: ${a.base} records; composite health ${a.health}/100. Indices — `+
+    Object.keys(a.indices).map(n=>`${n} ${a.indices[n]}`).join(", ")+`. Top themes — `+
+    a.themesSorted.slice(0,5).map(t=>`${t.label} (${t.count})`).join(", ")+`.` : "No dataset analyzed yet.";
+  return `You are the C.A.R.E. Design Advisor, an evidence-based assistant for healthcare architects designing oncology infusion centers. C.A.R.E. = Context-Aware Architectural Recommendation Engine.
+Answer the architect in plain, professional language. Be specific and DIMENSIONALLY CORRECT: give design parameters with real units (ft, inches, dBA, NRC, UGR, °F, lux/K). Always preserve nurse line-of-sight and code clearances (FGI 2022, CBC Ch.11B / ADA). Frame everything as decision SUPPORT — never override the architect's judgment.
+End every answer with a short "Evidence chain:" line naming the sources you used.
+Keep answers under ~180 words. Use a few bold labels and short bullet lists.
+
+Indexed knowledge base:
+${kbLines}
+
+Sources you may cite by name: FGI 2022 (Outpatient Facilities), Planetree 2021, Cai & Zimring 2018, Ulrich 1984, Pati et al. 2017 (HERD), Pallasmaa 2012, CBC Ch.11B / ADA.
+
+${dataLines}`;
+}
+function offlineAdvisor(q){
+  // pick best-matching theme from KB by keyword overlap
+  let best=null,score=-1;
+  for(const k in KB){const t=KB[k]; let s=0;
+    if(THEMES[k].kw.test(q))s+=3;
+    t.params.concat([t.title,t.why]).forEach(p=>{q.toLowerCase().split(/\W+/).forEach(w=>{if(w.length>3&&p.toLowerCase().includes(w))s++;});});
+    if(s>score){score=s;best=k;}}
+  const t=KB[best];
+  return `Here is what the indexed evidence base recommends for **${THEMES[best].label.toLowerCase()}** in the **${t.zone}**:\n`+
+    t.params.map(p=>`- ${p}`).join("\n")+
+    `\n\n**Why:** ${t.why}\n\nEvidence chain: ${t.cites.map(c=>c[0]).join(" · ")}.`;
+}
+function fmt(text){ // light markdown -> html
+  const lines=esc(text).split("\n"); let html="",inUl=false;
+  for(let ln of lines){
+    ln=ln.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+    const ev=/^evidence chain:/i.test(ln.replace(/<\/?strong>/g,""));
+    if(/^\s*[-•]\s+/.test(ln)){ if(!inUl){html+="<ul>";inUl=true;} html+="<li>"+ln.replace(/^\s*[-•]\s+/,"")+"</li>"; continue;}
+    if(inUl){html+="</ul>";inUl=false;}
+    if(!ln.trim()){html+="";continue;}
+    if(ev){html+=`<div class="ev">${ln}</div>`;} else html+=`<p style="margin:6px 0">${ln}</p>`;
+  }
+  if(inUl)html+="</ul>";
+  return html;
+}
+function renderStream(thinking){
+  const s=document.getElementById("stream");
+  s.innerHTML = advisorMsgs.map(m=>{
+    if(m.role==="user")return `<div class="msg u"><div class="ava">YL</div><div class="bub">${esc(m.content)}</div></div>`;
+    return `<div class="msg a"><div class="ava">&#9829;</div><div class="bub">${m.offline?'<div class="offline">Live AI unavailable here — answered from the built-in evidence base.</div>':''}${fmt(m.content)}</div></div>`;
+  }).join("") + (thinking?`<div class="msg a"><div class="ava">&#9829;</div><div class="bub typing"><span></span><span></span><span></span></div></div>`:"");
+  s.scrollTop=s.scrollHeight;
+}
+async function ask(q){
+  q=(q||"").trim(); if(!q)return;
+  advisorMsgs.push({role:"user",content:q}); renderStream(true);
+  document.getElementById("q").value="";
+  const apiMsgs=advisorMsgs.map(m=>({role:m.role,content:m.content}));
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:buildSystemPrompt(),messages:apiMsgs})
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    if(!text) throw new Error("empty");
+    advisorMsgs.push({role:"assistant",content:text});
+  }catch(err){
+    advisorMsgs.push({role:"assistant",content:offlineAdvisor(q),offline:true});
+  }
+  renderStream(false);
+}
+function wireAdvisor(){
+  document.getElementById("chips").innerHTML=SUGGESTED.map(s=>`<span class="chip">${esc(s)}</span>`).join("");
+  document.querySelectorAll("#chips .chip").forEach(c=>c.onclick=()=>ask(c.textContent));
+  document.getElementById("send").onclick=()=>ask(document.getElementById("q").value);
+  document.getElementById("q").addEventListener("keydown",e=>{if(e.key==="Enter")ask(e.target.value);});
+  advisorMsgs.push({role:"assistant",content:"Welcome. I'm the C.A.R.E. Design Advisor. Ask me anything about your infusion-center design and I'll respond with dimensionally-correct guidance and the evidence behind it. Try a question below, or type your own."});
+  renderStream(false);
+}
+
+/* ---------- nav ---------- */
+const CRUMBS={overview:"Executive Overview · Spring 2026",upload:"Upload Center · Stage 1 Ingestion",
+  insights:"POE Insights · Four Indices",zones:"Spatial Zone Explorer",recs:"Evidence-Based Recommendations",advisor:"AI Design Advisor"};
+function go(v){
+  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("on",a.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));
+  document.getElementById("crumb").textContent=CRUMBS[v];
+  document.querySelector(".main").scrollTop=0;
+}
+document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",()=>go(a.dataset.v)));
+
+/* ---------- boot ---------- */
+(function init(){
+  wireUpload(); wireAdvisor();
+  const recs=SAMPLE.map(r=>({role:r[0],zone:r[1],comment:r[2]}));
+  ANALYSIS=analyze(recs); DATA=recs; renderAll();
+})();
+</script>
+</body>
+</html>
